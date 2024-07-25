@@ -2,7 +2,7 @@ import debug from 'debug';
 
 import { Request, Response, NextFunction } from 'express';
 
-interface ReportingEndpointConfig {
+interface ReportingHeadersConfig {
     /**
      * The reporting group name to use. Set to avoid collision with existing Reporting API usage.
      *
@@ -64,9 +64,9 @@ type Header = (typeof headers)[number];
  *
  * @param reportingUrl The pathname or full URL for the reporting endpoint
  */
-export function reportingEndpointHeader(
+export function setupReportingHeaders(
     reportingUrl: string,
-    config: ReportingEndpointConfig = {}
+    config: ReportingHeadersConfig = {}
 ) {
     return (req: Request, res: Response, next: NextFunction) => {
         let setHeader = false;

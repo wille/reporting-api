@@ -8,9 +8,9 @@ export interface ReportingEndpointConfig {
     /**
      * Called when a report is received
      */
-    onReport: (report: Report) => any;
+    onReport: (report: Report, req: Request) => any;
 
-    onError?: (req: Request, error: Error) => any;
+    onError?: (error: Error, req: Request) => any;
 
     /**
      * Ignore CSP violations from browser extensions
@@ -100,7 +100,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
             } satisfies Report;
 
             if (filterReport(report, config)) {
-                onReport(report);
+                onReport(report, req);
             }
 
             return res.sendStatus(200);
@@ -119,7 +119,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
             } satisfies Report);
 
             if (filterReport(report, config)) {
-                onReport(report);
+                onReport(report, req);
             }
             return res.sendStatus(204);
         }
@@ -137,7 +137,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
                 } satisfies Report);
 
                 if (filterReport(report, config)) {
-                    onReport(report);
+                    onReport(report, req);
                 }
             }
         }
@@ -165,7 +165,7 @@ const bodyParser = express.json({
 function createErrorHandler(config: ReportingEndpointConfig) {
     return (err: Error, req: Request, res: Response, next: NextFunction) => {
         if (config.onError) {
-            config.onError(req, err);
+            config.onError(err, req);
         }
 
         if (res.headersSent) {

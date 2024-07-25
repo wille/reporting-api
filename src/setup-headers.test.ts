@@ -3,7 +3,7 @@ import assert from 'node:assert';
 
 import { createRequest, createResponse } from 'node-mocks-http';
 
-import { reportingEndpointHeader } from './index';
+import { setupReportingHeaders } from './index';
 
 test.describe('Handles multiple headers and only updates the last occuring', () => {
     const req = createRequest();
@@ -18,7 +18,7 @@ test.describe('Handles multiple headers and only updates the last occuring', () 
     res.setHeader('Content-Security-Policy', inputCsp);
     res.setHeader('Content-Security-Report-Only', "frame-src 'none'");
 
-    reportingEndpointHeader('/endpoint')(req, res, next);
+    setupReportingHeaders('/endpoint')(req, res, next);
 
     const outputCsp = res.getHeader('content-security-policy') as string[];
 
@@ -46,7 +46,7 @@ test.it(
             "frame-src 'self'",
         ];
         res.setHeader('Content-Security-Policy', inputCsp);
-        reportingEndpointHeader('/endpoint')(req, res, next);
+        setupReportingHeaders('/endpoint')(req, res, next);
         assert.equal(res.getHeader('content-security-policy'), inputCsp);
     }
 );
