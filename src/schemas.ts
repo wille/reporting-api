@@ -1,25 +1,25 @@
 import { z } from 'zod';
 
-export const ContentSecurityPolicyReportBody = z
+export const ContentSecurityPolicyReport = z
     .object({
         blockedURL: z.string(),
-        columnNumber: z.number(),
+        columnNumber: z.number().optional(),
         disposition: z.enum(['enforce', 'report']),
         documentURL: z.string(), // url
         effectiveDirective: z.string(),
-        lineNumber: z.number(),
+        lineNumber: z.number().optional(),
         originalPolicy: z.string(),
         referrer: z.string(),
         sample: z.string(),
-        sourceFile: z.string(),
+        sourceFile: z.string().optional(),
         statusCode: z.number(),
     })
     .passthrough();
-export type ContentSecurityPolicyReportBody = z.infer<
-    typeof ContentSecurityPolicyReportBody
+export type ContentSecurityPolicyReport = z.infer<
+    typeof ContentSecurityPolicyReport
 >;
 
-export const CrossOriginOpenerPolicyReportBody = z
+export const CrossOriginOpenerPolicyReport = z
     .object({
         disposition: z.enum(['reporting', 'enforce']),
         effectivePolicy: z.enum([
@@ -28,21 +28,18 @@ export const CrossOriginOpenerPolicyReportBody = z
             'same-origin-allow-popups',
             'same-origin-plus-coep',
         ]),
-
-        /*
-    'navigate-to-document',
-    'navigate-from-document',
-    'navigation-from-response',
-    'access-to-coop-page-from-opener',
-    'access-from-coop-page-to-opener',
-    'access-from-coop-page-to-other',
-    'access-from-coop-page-to-openee',
-    'access-to-coop-page-from-opener',
-    'access-to-coop-page-from-openee',
-    'access-to-coop-page-from-other',
-     */
-        type: z.string(),
-
+        type: z.enum([
+            'navigate-to-document',
+            'navigate-from-document',
+            'navigation-from-response',
+            'access-to-coop-page-from-opener',
+            'access-from-coop-page-to-opener',
+            'access-from-coop-page-to-other',
+            'access-from-coop-page-to-openee',
+            'access-to-coop-page-from-opener',
+            'access-to-coop-page-from-openee',
+            'access-to-coop-page-from-other',
+        ]),
         columnNumber: z.number().optional(),
         initialPopupURL: z.string().optional(),
         lineNumber: z.number().optional(),
@@ -51,11 +48,11 @@ export const CrossOriginOpenerPolicyReportBody = z
         sourceFile: z.string().optional(), // url
     })
     .passthrough();
-export type CrossOriginOpenerPolicyReportBody = z.infer<
-    typeof CrossOriginOpenerPolicyReportBody
+export type CrossOriginOpenerPolicyReport = z.infer<
+    typeof CrossOriginOpenerPolicyReport
 >;
 
-export const CrossOriginEmbedderPolicyReportBody = z
+export const CrossOriginEmbedderPolicyReport = z
     .object({
         disposition: z.enum(['reporting', 'enforce']),
 
@@ -77,11 +74,11 @@ export const CrossOriginEmbedderPolicyReportBody = z
 /**
  * https://github.com/camillelamy/explainers/blob/main/coop_reporting.md
  */
-export type CrossOriginEmbedderPolicyReportBody = z.infer<
-    typeof CrossOriginEmbedderPolicyReportBody
+export type CrossOriginEmbedderPolicyReport = z.infer<
+    typeof CrossOriginEmbedderPolicyReport
 >;
 
-export const NetworkErrorLoggingBody = z
+export const NetworkErrorLogging = z
     .object({
         elapsed_time: z.number(),
         method: z.string(),
@@ -94,41 +91,91 @@ export const NetworkErrorLoggingBody = z
         type: z.string(), // http.error
     })
     .passthrough();
-export type NetworkErrorLoggingBody = z.infer<typeof NetworkErrorLoggingBody>;
+export type NetworkErrorLogging = z.infer<typeof NetworkErrorLogging>;
+
+export const PermissionsPolicyViolation = z
+    .object({
+        message: z.string(),
+        disposition: z.enum(['report', 'enforce']),
+
+        /**
+         * The voilated policy
+         * `accelerometer`
+         */
+        policyId: z.string(),
+
+        columnNumber: z.number().optional(),
+        lineNumber: z.number().optional(),
+        sourceFile: z.string(),
+    })
+    .passthrough();
+export type PermissionsPolicyViolation = z.infer<
+    typeof PermissionsPolicyViolation
+>;
+
+export const InterventionReport = z.object({
+    id: z.string(),
+    message: z.string(),
+
+    columnNumber: z.number().optional(),
+    lineNumber: z.number().optional(),
+    sourceFile: z.string().optional(),
+});
+export type InterventionReport = z.infer<typeof InterventionReport>;
+
+export const CrashReport = z.object({
+    /**
+     * Crash reason
+     *
+     * - `oom` Out of memory
+     */
+    reason: z.string(), // oom
+});
+export type CrashReport = z.infer<typeof CrashReport>;
+
+export const DeprecationReport = z.object({
+    id: z.string(),
+    message: z.string(),
+
+    columnNumber: z.number().optional(),
+    lineNumber: z.number().optional(),
+    sourceFile: z.string().optional(),
+});
+export type DeprecationReport = z.infer<typeof DeprecationReport>;
 
 export const Report = z
     .discriminatedUnion('type', [
         z.object({
             type: z.literal('csp-violation'),
-            body: ContentSecurityPolicyReportBody,
+            body: ContentSecurityPolicyReport,
         }),
         z.object({
             type: z.literal('coop'),
-            body: CrossOriginOpenerPolicyReportBody,
+            body: CrossOriginOpenerPolicyReport,
         }),
         z.object({
             type: z.literal('coep'),
-            body: CrossOriginEmbedderPolicyReportBody,
+            body: CrossOriginEmbedderPolicyReport,
         }),
         z.object({
             type: z.literal('deprecation'),
-            body: z.object({}).passthrough(),
+            body: DeprecationReport,
         }),
         z.object({
             type: z.literal('crash'),
-            body: z.object({}).passthrough(),
+            body: CrashReport,
         }),
         z.object({
             type: z.literal('intervention'),
-            body: z.object({}).passthrough(),
+            body: InterventionReport,
         }),
         z.object({
             type: z.literal('network-error'),
-            body: NetworkErrorLoggingBody,
+            body: NetworkErrorLogging,
         }),
         z.object({
             type: z.literal('permissions-policy-violation'),
-            body: z.object({}).passthrough(),
+            body: PermissionsPolicyViolation,
         }),
     ])
     .and(
@@ -141,7 +188,7 @@ export const Report = z
 
             /**
              * The format the report was received in
-             * 
+             *
              * - `report-uri` - legacy csp report-uri attribute
              * - `report-to-buffered` Reporting API v2 report
              * - `report-to-single` Safari is not sending buffered reports
