@@ -1,7 +1,7 @@
 import debug from 'debug';
 import express, { Request, Response, NextFunction } from 'express';
 
-import { Report, ContentSecurityPolicyReportBody } from './schemas';
+import { Report, ContentSecurityPolicyReport } from './schemas';
 import { SafeParseReturnType, ZodError } from 'zod';
 
 const log = debug('reporting-api:endpoint');
@@ -12,7 +12,18 @@ export interface ReportingEndpointConfig {
      */
     onReport: (report: Report, req: Request) => any;
 
-    onError?: (error: Error, req: Request) => any;
+    /**
+     * Called when a report validation error occured.
+     * 
+     * This should not happen as the schemas are well relaxed but if a new type of
+     * report is received then this function is used to track these reports so we
+     * can take action on them.
+     * 
+     * @param error The validation error (ZodError)
+     * @param object The body of the report that failed the validation
+     * @param req The request
+     */
+    onValidationError?: (error: ZodError, body: any, req: Request) => any;
 
     /**
      * Ignore CSP violations from browser extensions
@@ -56,7 +67,7 @@ function filterReport(
 }
 
 function createReportingEndpoint(config: ReportingEndpointConfig) {
-    const { onReport, onError } = config;
+    const { onReport, onValidationError } = config;
 
     if (config.debug) {
         debug.enable('reporting-api:*');
@@ -81,8 +92,8 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 raw,
                 err: result.error,
             });
-            if (onError) {
-                onError(result.error, req);
+            if (onValidationError) {
+                onValidationError(result.error, raw, req);
             }
 
             throw result.error;
@@ -204,36 +215,10 @@ const bodyParser = express.json({
     limit: '200kb',
 });
 
-function createErrorHandler(config: ReportingEndpointConfig) {
-    return (err: Error, req: Request, res: Response, next: NextFunction) => {
-        if (config.onError) {
-            config.onError(err, req);
-        }
-
-        if (err instanceof ZodError) {
-            log('parse error: %O body: %O', {
-                err,
-                body: req.body,
-            });
-        } else {
-            log('error: %O, body: %O', err, req.body);
-        }
-
-        if (res.headersSent) {
-            return next(err);
-        }
-
-        // debug
-        res.sendStatus(200);
-        // return res.sendStatus(err instanceof ZodError ? 400 : 500);
-    };
-}
-
 /**
  * Express route to collect reports
  */
 export const reportingEndpoint = (config: ReportingEndpointConfig) => [
     bodyParser,
     createReportingEndpoint(config),
-    createErrorHandler(config),
 ];
