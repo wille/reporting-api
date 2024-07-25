@@ -86,6 +86,10 @@ export function setupReportingHeaders(
 
         for (const headerKey of headers) {
             const headers = res.getHeader(headerKey);
+            if (!headers) {
+                continue;
+            }
+
             const values = Array.isArray(headers) ? headers : [headers];
 
             for (let i = 0; i < values.length; i++) {
