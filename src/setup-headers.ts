@@ -24,12 +24,18 @@ interface ReportingHeadersConfig {
      * Uses Reporting API v0 `Report-To` header as the Reporting API v1 doesn't support
      * Network Error Logging. See https://developer.chrome.com/blog/reporting-api-migration#network_error_logging
      */
-    enableNetworkErrorLogging?: boolean;
+    enableNetworkErrorLogging?:
+        | boolean
+        | {
+              success_fraction?: number;
+              failure_fraction?: number;
+              include_subdomains?: boolean;
+          };
 
     /**
      * Report version
      */
-    version?: string;
+    version?: string | number;
 }
 
 /**
@@ -70,6 +76,11 @@ export function setupReportingHeaders(
     reportingUrl: string,
     config: ReportingHeadersConfig = {}
 ) {
+    // If a version is set then include it in the endpoint
+    if (config.version) {
+        reportingUrl = addQueryParam(reportingUrl, 'version', String(config.version));
+    }
+
     return (req: Request, res: Response, next: NextFunction) => {
         let setHeader = false;
 
@@ -128,17 +139,26 @@ export function setupReportingHeaders(
                 'Report-To',
                 JSON.stringify({
                     group: reportTo,
-                    max_age: 60 * 60 * 24 * 1000, // 1 day, milliseconds
+                    max_age: 60 * 60 * 24, // seconds?
                     endpoints: [{ url: reportingUrl }],
                 })
             );
-            res.setHeader(
-                'NEL',
-                JSON.stringify({
-                    report_to: reportTo,
-                    max_age: 60 * 60 * 24, // 1 day
-                })
-            );
+
+            const nel: any = {
+                report_to: reportTo,
+                max_age: 60 * 60 * 24, // 1 day
+            };
+
+            if (typeof config.enableNetworkErrorLogging === 'object') {
+                nel.failure_fraction =
+                    config.enableNetworkErrorLogging.failure_fraction;
+                nel.success_fraction =
+                    config.enableNetworkErrorLogging.success_fraction;
+                nel.include_subdomains =
+                    config.enableNetworkErrorLogging.include_subdomains;
+            }
+
+            res.setHeader('NEL', JSON.stringify(nel));
         }
 
         return next();
@@ -167,7 +187,7 @@ function addReporterToHeader(
         case 'Content-Security-Policy':
         case 'Content-Security-Policy-Report-Only':
             // report-uri is deprecated in CSP 3 and ignored if the browser supports report-to, but Firefox does not and will use report-uri
-            value += `;report-uri ${reportingUri}?src=report-uri`;
+            value += `;report-uri ${addQueryParam(reportingUri, 'src', 'report-uri')}`;
 
             // CSP does not have a `=` between report-to and the group name
             value += `;report-to ${reportingGroup}`;
@@ -190,4 +210,10 @@ function addReporterToHeader(
     }
 
     return value;
+}
+
+function addQueryParam(url: string, k: string, v: string) {
+    const sep = url.includes('?') ? '&' : '?';
+
+    return `${url}${sep}${k}=${encodeURIComponent(v)}`;
 }

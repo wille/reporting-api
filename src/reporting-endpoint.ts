@@ -90,6 +90,11 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
     }
 
     return (req: Request, res: Response, next: NextFunction) => {
+        const version =
+            typeof req.query.version === 'string'
+                ? req.query.version
+                : undefined;
+
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (req.headers['content-type'] === 'application/csp-report') {
@@ -119,7 +124,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 sample: body['script-sample'],
                 sourceFile: body['source-file'],
                 statusCode: body['status-code'],
-            } satisfies ContentSecurityPolicyReportBody;
+            } satisfies ContentSecurityPolicyReport;
 
             const result = Report.safeParse({
                 body: v2body,
@@ -133,11 +138,18 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 user_agent: req.headers['user-agent'] || '',
 
                 report_format: 'report-uri',
+
+                version,
             } satisfies Report);
 
             handleReport(result, req.body, req);
 
             return res.sendStatus(200);
+        }
+
+        if (req.headers['content-type'] !== 'application/reports+json') {
+            log('bad request: Content-Type: %s', req.headers['content-type']);
+            return res.sendStatus(400);
         }
 
         // Safari sends reports in the format `body: {...}` with no `age`
@@ -150,6 +162,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 age: 0,
                 user_agent: req.headers['user-agent'] || '',
                 report_format: 'report-to-single',
+                version,
             } satisfies Report);
 
             handleReport(result, req.body, req);
@@ -166,6 +179,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                     url: raw.url,
                     user_agent: raw.user_agent,
                     report_format: 'report-to-buffered',
+                    version,
                 } satisfies Report);
 
                 handleReport(result, raw, req);
