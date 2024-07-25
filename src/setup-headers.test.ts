@@ -5,6 +5,10 @@ import { createRequest, createResponse } from 'node-mocks-http';
 
 import { setupReportingHeaders } from './index';
 
+import debug from 'debug';
+
+debug.enable('*');
+
 test.describe('Handles multiple headers and only updates the last occuring', () => {
     const req = createRequest();
     const res = createResponse();

@@ -2,6 +2,8 @@ import debug from 'debug';
 
 import { Request, Response, NextFunction } from 'express';
 
+const log = debug('reporting-api:headers');
+
 interface ReportingHeadersConfig {
     /**
      * The reporting group name to use. Set to avoid collision with existing Reporting API usage.
@@ -72,9 +74,7 @@ export function setupReportingHeaders(
         let setHeader = false;
 
         if (res.getHeader('Reporting-Endpoints')) {
-            debug.log(
-                'Reporting-Endpoints already set, will not set up reporting'
-            );
+            log('Reporting-Endpoints already set, will not set up reporting');
             return next();
         }
 
@@ -155,7 +155,7 @@ function addReporterToHeader(
         value.includes('report-to') ||
         value.includes('report-uri ')
     ) {
-        debug.log(`Header "${header}: ${value}" already contains reporter`);
+        log(`Header "%s: %s" already contains reporter`, header, value);
         return null;
     }
 
@@ -181,7 +181,7 @@ function addReporterToHeader(
             value += `;report-to="${reportingGroup}"`;
             break;
         default:
-            debug.log(`Unknown header ${header}`);
+            log(`Unknown header ${header}`);
             return null;
     }
 

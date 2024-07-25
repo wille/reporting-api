@@ -4,6 +4,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import { Report, ContentSecurityPolicyReportBody } from './schemas';
 import { ZodError } from 'zod';
 
+const log = debug('reporting-api:endpoint');
+
 export interface ReportingEndpointConfig {
     /**
      * Called when a report is received
@@ -45,25 +47,31 @@ function filterReport(
 
     // Reporting API v1 `age` is in milliseconds but our settings is in seconds
     if (maxAge && report.age > maxAge * 1000) {
+        log('report is too old %O', report);
         return false;
     }
 
     return true;
 }
 
+function logDebugReport(report: Report) {
+    log('received report %O', report);
+}
+
 function reportingEndpointReporter(config: ReportingEndpointConfig) {
     const { onReport } = config;
 
     return (req: Request, res: Response, next: NextFunction) => {
-        const src = typeof req.query.src === 'string' ? req.query.src : '';
-
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (req.headers['content-type'] === 'application/csp-report') {
             const body = req.body['csp-report'];
 
             if (!body) {
-                debug('application/csp-report without csp-report in body');
+                log(
+                    'application/csp-report without csp-report in body: %O',
+                    req.body
+                );
                 return res.sendStatus(400);
             }
 
@@ -100,6 +108,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
             } satisfies Report;
 
             if (filterReport(report, config)) {
+                logDebugReport(report);
                 onReport(report, req);
             }
 
@@ -119,6 +128,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
             } satisfies Report);
 
             if (filterReport(report, config)) {
+                logDebugReport(report);
                 onReport(report, req);
             }
             return res.sendStatus(204);
@@ -137,12 +147,11 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
                 } satisfies Report);
 
                 if (filterReport(report, config)) {
+                    logDebugReport(report);
                     onReport(report, req);
                 }
             }
         }
-
-        debug.log('reporting-endpoint', src);
 
         return res.sendStatus(204);
     };
@@ -168,19 +177,20 @@ function createErrorHandler(config: ReportingEndpointConfig) {
             config.onError(err, req);
         }
 
+        if (err instanceof ZodError) {
+            log('parse error: %O body: %O', {
+                err,
+                body: req.body,
+            });
+        } else {
+            log('error: %O, body: %O', err, req.body);
+        }
+
         if (res.headersSent) {
             return next(err);
         }
 
-        if (err instanceof ZodError) {
-            debug.log('Parse error', {
-                err,
-                body: req.body,
-            });
-            return res.sendStatus(200);
-        }
-
-        return res.sendStatus(500);
+        return res.sendStatus(err instanceof ZodError ? 400 : 500);
     };
 }
 
