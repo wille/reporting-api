@@ -131,7 +131,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
                 logDebugReport(report);
                 onReport(report, req);
             }
-            return res.sendStatus(204);
+            return res.sendStatus(200);
         }
 
         // Modern reporting API
@@ -153,7 +153,7 @@ function reportingEndpointReporter(config: ReportingEndpointConfig) {
             }
         }
 
-        return res.sendStatus(204);
+        return res.sendStatus(200);
     };
 }
 
