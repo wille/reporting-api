@@ -61,9 +61,17 @@ export const CrossOriginEmbedderPolicyReportBody = z
 
         blockedURL: z.string().optional(), // url
 
+        /**
+         * - navigation
+         * - worker initialization
+         * - corp
+         */
         type: z.string(), // navigation, 'worker initialization', corp
 
-        destination: z.string(), // script, iframe
+        /**
+         * Set on `type: 'corp'`
+         */
+        destination: z.string().optional(), // script, iframe
     })
     .passthrough();
 /**
@@ -72,6 +80,21 @@ export const CrossOriginEmbedderPolicyReportBody = z
 export type CrossOriginEmbedderPolicyReportBody = z.infer<
     typeof CrossOriginEmbedderPolicyReportBody
 >;
+
+export const NetworkErrorLoggingBody = z
+    .object({
+        elapsed_time: z.number(),
+        method: z.string(),
+        phase: z.string(), // application
+        protocol: z.string(),
+        referrer: z.string(),
+        sampling_fraction: z.number(),
+        server_ip: z.string(),
+        status_code: z.number(),
+        type: z.string(), // http.error
+    })
+    .passthrough();
+export type NetworkErrorLoggingBody = z.infer<typeof NetworkErrorLoggingBody>;
 
 export const Report = z
     .discriminatedUnion('type', [
@@ -101,7 +124,7 @@ export const Report = z
         }),
         z.object({
             type: z.literal('network-error'),
-            body: z.object({}).passthrough(),
+            body: NetworkErrorLoggingBody,
         }),
         z.object({
             type: z.literal('permissions-policy-violation'),
@@ -115,6 +138,14 @@ export const Report = z
             user_agent: z.string(),
 
             version: z.string().optional(),
+
+            /**
+             * The format the report was received in
+             * 
+             * - `report-uri` - legacy csp report-uri attribute
+             * - `report-to-buffered` Reporting API v2 report
+             * - `report-to-single` Safari is not sending buffered reports
+             */
             report_format: z.enum([
                 'report-uri',
                 'report-to-buffered',
