@@ -14,11 +14,11 @@ export interface ReportingEndpointConfig {
 
     /**
      * Called when a report validation error occured.
-     * 
+     *
      * This should not happen as the schemas are well relaxed but if a new type of
      * report is received then this function is used to track these reports so we
      * can take action on them.
-     * 
+     *
      * @param error The validation error (ZodError)
      * @param object The body of the report that failed the validation
      * @param req The request
@@ -46,15 +46,14 @@ function filterReport(
     report: Report,
     { ignoreBrowserExtensions, maxAge }: ReportingEndpointConfig
 ): boolean {
-    if (ignoreBrowserExtensions) {
-        // if (
-        //     report.sourceFile === 'chrome-extension' ||
-        //     // Firefox enforces the CSP for all extension user scripts
-        //     report.sourceFile === 'moz-extension'
-        // safari-web-extension://*
-        // ) {
-        //     return false;
-        // }
+    if (ignoreBrowserExtensions && report.type === 'csp-violation') {
+        if (
+            report.body.sourceFile === 'chrome-extension' ||
+            report.body.sourceFile === 'moz-extension' ||
+            report.body.sourceFile?.startsWith('safari-web-extension://')
+        ) {
+            return false;
+        }
     }
 
     // Reporting API v1 `age` is in milliseconds but our settings is in seconds
@@ -101,6 +100,10 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
     }
 
     return (req: Request, res: Response, next: NextFunction) => {
+        if (req.method !== 'POST') {
+            return res.sendStatus(405);
+        }
+
         const version =
             typeof req.query.version === 'string'
                 ? req.query.version
@@ -172,7 +175,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 url,
                 age: 0,
                 user_agent: req.headers['user-agent'] || '',
-                report_format: 'report-to-single',
+                report_format: 'report-to-safari',
                 version,
             } satisfies Report);
 
@@ -189,7 +192,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                     age: raw.age,
                     url: raw.url,
                     user_agent: raw.user_agent,
-                    report_format: 'report-to-buffered',
+                    report_format: 'report-to',
                     version,
                 } satisfies Report);
 

@@ -78,7 +78,11 @@ export function setupReportingHeaders(
 ) {
     // If a version is set then include it in the endpoint
     if (config.version) {
-        reportingUrl = addQueryParam(reportingUrl, 'version', String(config.version));
+        reportingUrl = addQueryParam(
+            reportingUrl,
+            'version',
+            String(config.version)
+        );
     }
 
     return (req: Request, res: Response, next: NextFunction) => {

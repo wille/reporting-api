@@ -180,10 +180,20 @@ export const Report = z
     ])
     .and(
         z.object({
+            /**
+             * URL of the page where the violation occured
+             */
             url: z.string(), // url
+
+            /**
+             * Age of the report in milliseconds
+             */
             age: z.number(),
             user_agent: z.string(),
 
+            /**
+             * Your policy version
+             */
             version: z.string().optional(),
 
             /**
@@ -195,8 +205,8 @@ export const Report = z
              */
             report_format: z.enum([
                 'report-uri',
-                'report-to-buffered',
-                'report-to-single',
+                'report-to',
+                'report-to-safari',
             ]),
         })
     );

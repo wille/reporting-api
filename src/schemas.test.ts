@@ -12,12 +12,12 @@ test.describe('Parse report', () => {
         age: 0,
         user_agent: '',
         url: '',
-        report_format: 'report-to-buffered',
+        report_format: 'report-to',
         type: 'coep',
         body: {
             disposition: 'reporting',
             type: 'corp',
-            destination: 'close',   
-        }
+            destination: 'close',
+        },
     } satisfies schemas.Report);
 });

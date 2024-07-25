@@ -5,9 +5,8 @@
 This package provides a middleware for Express.js that automatically configures the [Reporting API](https://w3c.github.io/reporting/) on existing policy headers and an endpoint to help you collect your own reports using the Reporting API.
 
 Automatically sets up reporting for the following headers and features supporting the Reporting API
-- `Content-Security-Policy` (CSP)
-- `Content-Security-Policy-Report-Only`
-
+- [`Content-Security-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) (CSP)
+- [`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only)
 - [`Permissions-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Permissions_Policy)
 - [`Permissions-Policy-Report-Only`](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md
 )
@@ -20,16 +19,13 @@ Automatically sets up reporting for the following headers and features supportin
 - [Intervention Reports](https://wicg.github.io/intervention-reporting/)
 - [Crash Reports](https://wicg.github.io/crash-reporting/)
 
-Supports "CSP Level 2 Reports" in browsers browsers not supporting `report-to` yet but supports the `report-uri` attribute
+Supports "CSP Level 2 Reports" in browsers browsers not supporting the Reporting API.
 
 ## Core concepts
 
-## Use cases
+Retrofitting a policy on a large website is hard to get right first. The solution is to use `-Report-Only` policies that will not enforce them and break your website. These headers and their enforcing equivalents supports reporting, which makes all policy violations gets sent to you so you can adjust your policies to not break functionality. 
 
-## Usage
-
-
-### Setup a reporter and the header middleware
+### Setup a reporting endpoint and setup reporters on your policy headers
 ```ts
 import { reportingEndpoint } from 'reporting-api';
 import express from 'express';
@@ -42,22 +38,15 @@ app.post('/reporting-endpoint', reportingEndpoint({
     // Collect the reports and do what you want with them
     console.log('Received report', report);
 
-    if (report.disposition === 'enforce') {
-      // This affects real clients on your site and needs to be fixed
-      console.log('Enforced policy', report);
-    }
-
-    if (report.disposition === 'report') {
-      // This is received from policies defined in XX-Policy-Report-Only headers and is not enforced by the browser
-      console.log('Triggered policy', report);
-    }
-
-    // report.type = csp-violation,deprecation,coop,..
-    // report.disposition = enforce,report
+    console.log('Report received', {
+      isEnforced: report.body.type === 'enforce';
+      type: report.type,
+      body: report.body,
+    });
   }
 }));
 
-// A web page
+// Set the security headers
 app.get('/*', (req, res, next) => {
   // Set a CSP that disallows inline scripts.
   res.setHeader('Content-Security-Policy', "script-src 'self'");
@@ -68,10 +57,16 @@ app.get('/*', (req, res, next) => {
   // COEP policy that disallows external resources that does not use CORS or CORP (Cross-Origin-Resource-Policy)
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
 });
-app.get('/*', reportingEndpointHeader('/reporting-endpoint', { includeDefault: true }));
+// Setup the reporters on the headers
+app.get('/*', setupReportingHeaders('/reporting-endpoint', {
+  includeDefaultReporters: true,
+  enableNetworkErrorLogging: true,
+  version: '1',
+}));
+// 
 app.get('/test', (req, res) => {
   res.writeHead(200, {
-    'Content-Type': 'text/plain; charset=utf8'
+    'Content-Type': 'text/html; charset=utf8'
   });
 
   // The script will not run and instead generate a csp-violation report
@@ -80,7 +75,7 @@ app.get('/test', (req, res) => {
   res.end(`Hello World!
 <script>alert(1)</script>
 <a href="https://google.com" target="_blank">Trigger COOP</>
-<img src="">
+<img src="https://lh3.googleusercontent.com/wAPeTvxh_EwOisF8kMR2L2eOrIOzjfA5AjE28W5asyfGeH85glwrO6zyqL71dCC26R63chADTO7DLOjnqRoXXOAB8t2f4C3QnU6o0BA">
 `);
 });
 
@@ -89,14 +84,27 @@ app.listen(8080);
 
 > [!NOTE]
 > The policy headers must be set before the reportingEndpointHeader middleware so the middleware is able to append the reporter to the policy headers.
+>
+> If the reporting endpoint is on another origin, you need to setup CORS
+> ```ts
+> import cors from 'cors';
+> const corsMiddleware = cors();
+> app.options('/reporting-endpoint', cors());
+> app.post('/reporting-endpoint', cors(), ...);
+> ```
 
-### Response with a `Reporting-Endpoints` header created and reporter setup on the Policy header
+### Response with a `Reporting-Endpoints` header created and reporter setup on the Policy headers
 ```
 $ curl -I localhost:8080/test
 Reporting-Endpoints: default=/test-endpoint
-Content-Security-Policy-Report-Only: default-src 'self'; report-to default; report-uri /reporting-endpoint?src=report-uri
+Content-Security-Policy: default-src 'self'; report-to default; report-uri /reporting-endpoint?src=report-uri
+Cross-Origin-Opener-Policy: same-origin; report-to="default"
+Cross-Origin-Embedder-Policy: require-corp; report-to="default"
 
-Hello world! <script>alert(1)</script>
+Hello World!
+<script>alert(1)</script>
+<a href="https://google.com" target="_blank">Trigger COOP</>
+<img src="https://lh3.googleusercontent.com/wAPeTvxh_EwOisF8kMR2L2eOrIOzjfA5AjE28W5asyfGeH85glwrO6zyqL71dCC26R63chADTO7DLOjnqRoXXOAB8t2f4C3QnU6o0BA">
 ```
 
 > [!TIP]
@@ -113,11 +121,10 @@ Hello world! <script>alert(1)</script>
 > }
 >```
 
-## Options
+## Configuration options
 
-`reporter.reportingEndpoint` options
-
-- ****
+- [`reportingEndpoint`](./src/reporting-endpoint.ts)
+- [`setupReportingHeaders`](./src/setup-headers.ts)
 
 ## Resources
 
@@ -132,12 +139,5 @@ Hello world! <script>alert(1)</script>
 
 - `Permissions-Policy` reports to the `default` reporting group if `report-to` is not set.
 - `report-to` group MUST be in double quotes (eg. `report-to="group"`) in COOP AND COEP headers to be used.
-- [`Document-Policy`](https://wicg.github.io/document-policy/) and [`Document-Policy-Report-Only`](https://wicg.github.io/document-policy/) is not available in any browser yet.
+- [`Document-Policy`](https://wicg.github.io/document-policy/) and [`Document-Policy-Report-Only`](https://wicg.github.io/document-policy/) is doesn't look that supported or well documented, is it supersceded by Permissions-Policy?
 - Safari sends reports in the format `body: { ... }` instead of an array of reports and it doesn't include an `age`
-
-#### TODO
-
-- README
-- Versioning
-- Fail safe Schemas for all supported types of reports
-- Error handling
