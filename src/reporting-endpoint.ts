@@ -2,7 +2,7 @@ import debug from 'debug';
 import express, { Request, Response, NextFunction } from 'express';
 
 import { Report, ContentSecurityPolicyReportBody } from './schemas';
-import { ZodError } from 'zod';
+import { SafeParseReturnType, ZodError } from 'zod';
 
 const log = debug('reporting-api:endpoint');
 
@@ -40,6 +40,7 @@ function filterReport(
         //     report.sourceFile === 'chrome-extension' ||
         //     // Firefox enforces the CSP for all extension user scripts
         //     report.sourceFile === 'moz-extension'
+        // safari-web-extension://*
         // ) {
         //     return false;
         // }
@@ -54,16 +55,41 @@ function filterReport(
     return true;
 }
 
-function logDebugReport(report: Report) {
-    log('received report %O', report);
-}
-
 function createReportingEndpoint(config: ReportingEndpointConfig) {
-    const { onReport } = config;
+    const { onReport, onError } = config;
+
+    if (config.debug) {
+        debug.enable('reporting-api:*');
+    }
+
+    function handleReport<Input extends Report, Output extends Report>(
+        result: SafeParseReturnType<Input, Output>,
+        raw: any,
+        req: Request
+    ) {
+        if (result.success) {
+            const report = result.data;
+
+            if (filterReport(report, config)) {
+                onReport(report, req);
+                log('received report %O', report);
+            } else {
+                log('filtered %j', report);
+            }
+        } else {
+            log('parse error %j', {
+                raw,
+                err: result.error,
+            });
+            if (onError) {
+                onError(result.error, req);
+            }
+
+            throw result.error;
+        }
+    }
 
     return (req: Request, res: Response, next: NextFunction) => {
-        log('raw report received %s %j', req.headers['content-type'], req.body);
-
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (req.headers['content-type'] === 'application/csp-report') {
@@ -77,7 +103,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 return res.sendStatus(400);
             }
 
-            const csp = ContentSecurityPolicyReportBody.parse({
+            const v2body = {
                 blockedURL: body['blocked-uri'],
                 columnNumber: body['column-number'],
                 disposition: body['disposition'],
@@ -93,10 +119,10 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 sample: body['script-sample'],
                 sourceFile: body['source-file'],
                 statusCode: body['status-code'],
-            } satisfies ContentSecurityPolicyReportBody);
+            } satisfies ContentSecurityPolicyReportBody;
 
-            const report = {
-                body: csp,
+            const result = Report.safeParse({
+                body: v2body,
 
                 type: 'csp-violation',
                 url: body['document-uri'],
@@ -107,12 +133,9 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 user_agent: req.headers['user-agent'] || '',
 
                 report_format: 'report-uri',
-            } satisfies Report;
+            } satisfies Report);
 
-            if (filterReport(report, config)) {
-                logDebugReport(report);
-                onReport(report, req);
-            }
+            handleReport(result, req.body, req);
 
             return res.sendStatus(200);
         }
@@ -120,7 +143,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         // Safari sends reports in the format `body: {...}` with no `age`
         if (typeof req.body.body === 'object') {
             const { body, type, url } = req.body;
-            const report = Report.parse({
+            const result = Report.safeParse({
                 body,
                 type,
                 url,
@@ -129,29 +152,23 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 report_format: 'report-to-single',
             } satisfies Report);
 
-            if (filterReport(report, config)) {
-                logDebugReport(report);
-                onReport(report, req);
-            }
+            handleReport(result, req.body, req);
             return res.sendStatus(200);
         }
 
         // Modern reporting API
         if (Array.isArray(req.body)) {
-            for (const r of req.body) {
-                const report = Report.parse({
-                    body: r,
-                    type: r.type,
-                    age: r.age,
-                    url: r.url,
-                    user_agent: r.user_agent,
+            for (const raw of req.body) {
+                const result = Report.safeParse({
+                    body: raw.body,
+                    type: raw.type,
+                    age: raw.age,
+                    url: raw.url,
+                    user_agent: raw.user_agent,
                     report_format: 'report-to-buffered',
                 } satisfies Report);
 
-                if (filterReport(report, config)) {
-                    logDebugReport(report);
-                    onReport(report, req);
-                }
+                handleReport(result, raw, req);
             }
         }
 
@@ -192,7 +209,9 @@ function createErrorHandler(config: ReportingEndpointConfig) {
             return next(err);
         }
 
-        return res.sendStatus(err instanceof ZodError ? 400 : 500);
+        // debug
+        res.sendStatus(200);
+        // return res.sendStatus(err instanceof ZodError ? 400 : 500);
     };
 }
 
