@@ -58,10 +58,12 @@ function logDebugReport(report: Report) {
     log('received report %O', report);
 }
 
-function reportingEndpointReporter(config: ReportingEndpointConfig) {
+function createReportingEndpoint(config: ReportingEndpointConfig) {
     const { onReport } = config;
 
     return (req: Request, res: Response, next: NextFunction) => {
+        log('raw report received %s %j', req.headers['content-type'], req.body);
+
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (req.headers['content-type'] === 'application/csp-report') {
@@ -199,6 +201,6 @@ function createErrorHandler(config: ReportingEndpointConfig) {
  */
 export const reportingEndpoint = (config: ReportingEndpointConfig) => [
     bodyParser,
-    reportingEndpointReporter(config),
+    createReportingEndpoint(config),
     createErrorHandler(config),
 ];
