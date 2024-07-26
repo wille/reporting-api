@@ -10,9 +10,9 @@ export const ContentSecurityPolicyReport = z
         lineNumber: z.number().optional(),
         originalPolicy: z.string(),
         referrer: z.string(),
-        sample: z.string(),
+        sample: z.string().optional(),
         sourceFile: z.string().optional(),
-        statusCode: z.number(),
+        statusCode: z.number().optional(),
     })
     .passthrough();
 export type ContentSecurityPolicyReport = z.infer<

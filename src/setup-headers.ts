@@ -78,11 +78,9 @@ export function setupReportingHeaders(
 ) {
     // If a version is set then include it in the endpoint
     if (config.version) {
-        reportingUrl = addQueryParam(
-            reportingUrl,
-            'version',
-            String(config.version)
-        );
+        reportingUrl = addSearchParams(reportingUrl, {
+            version: String(config.version),
+        });
     }
 
     return (req: Request, res: Response, next?: NextFunction) => {
@@ -198,7 +196,11 @@ function addReporterToHeader(
         case 'Content-Security-Policy':
         case 'Content-Security-Policy-Report-Only':
             // report-uri is deprecated in CSP 3 and ignored if the browser supports report-to, but Firefox does not and will use report-uri
-            value += `;report-uri ${addQueryParam(reportingUri, 'src', 'report-uri')}`;
+            const reportUri = addSearchParams(reportingUri, {
+                // Older versions of firefox doesn't include the disposition so we track it manually
+                disposition: header === 'Content-Security-Policy' ? 'enforce' : 'report',
+            });
+            value += `;report-uri ${reportUri}`;
 
             // CSP does not have a `=` between report-to and the group name
             value += `;report-to ${reportingGroup}`;
@@ -223,8 +225,9 @@ function addReporterToHeader(
     return value;
 }
 
-function addQueryParam(url: string, k: string, v: string) {
+function addSearchParams(url: string, params: Record<string, string>) {
     const sep = url.includes('?') ? '&' : '?';
-
-    return `${url}${sep}${k}=${encodeURIComponent(v)}`;
+    const usp = new URLSearchParams(params);
+    usp.sort();
+    return `${url}${sep}${usp.toString()}`;
 }

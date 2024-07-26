@@ -125,7 +125,10 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
             const v2body = {
                 blockedURL: body['blocked-uri'],
                 columnNumber: body['column-number'],
-                disposition: body['disposition'],
+
+                // Older Firefox doesn't set the disposition so we track it in the query params
+                disposition: body['disposition'] || req.query.disposition,
+
                 documentURL: body['document-uri'],
 
                 // `violated-directive` is deprecated in favor of `effective-directive`
