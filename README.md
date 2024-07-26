@@ -56,8 +56,11 @@ app.get('/*', (req, res, next) => {
 
   // COEP policy that disallows external resources that does not use CORS or CORP (Cross-Origin-Resource-Policy)
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+
+  // Setup headers alternative 1
+  setupReportingHeaders('/reporting-endpoint')(req, res);
 });
-// Setup the reporters on the headers
+// Setup headers alternative 2
 app.get('/*', setupReportingHeaders('/reporting-endpoint', {
   includeDefaultReporters: true,
   enableNetworkErrorLogging: true,

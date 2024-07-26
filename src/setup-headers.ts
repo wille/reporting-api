@@ -85,12 +85,15 @@ export function setupReportingHeaders(
         );
     }
 
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next?: NextFunction) => {
         let setHeader = false;
 
         if (res.getHeader('Reporting-Endpoints')) {
             log('Reporting-Endpoints already set, will not set up reporting');
-            return next();
+            if (next) {
+                next();
+            }
+            return;
         }
 
         // The 'default' reporting group always receives Deprecation, Crash and Intervention reports.
@@ -165,7 +168,11 @@ export function setupReportingHeaders(
             res.setHeader('NEL', JSON.stringify(nel));
         }
 
-        return next();
+        if (next) {
+            next();
+        }
+
+        return;
     };
 }
 
