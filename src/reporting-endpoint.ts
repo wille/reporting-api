@@ -48,9 +48,9 @@ function filterReport(
 ): boolean {
     if (ignoreBrowserExtensions && report.type === 'csp-violation') {
         if (
-            report.body.sourceFile === 'chrome-extension' ||
-            report.body.sourceFile === 'moz-extension' ||
-            report.body.sourceFile?.startsWith('safari-web-extension://')
+            report.body.sourceFile?.startsWith('chrome-extension') ||
+            report.body.sourceFile?.startsWith('moz-extension') ||
+            report.body.sourceFile?.startsWith('safari-web-extension')
         ) {
             return false;
         }
