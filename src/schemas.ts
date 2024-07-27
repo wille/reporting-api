@@ -129,7 +129,7 @@ export const CrashReport = z.object({
      *
      * - `oom` Out of memory
      */
-    reason: z.string(), // oom
+    reason: z.string().optional(), // oom
 });
 export type CrashReport = z.infer<typeof CrashReport>;
 
