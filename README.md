@@ -26,6 +26,11 @@ Supports "CSP Level 2 Reports" in browsers browsers not supporting the Reporting
 Retrofitting a policy on a large website is hard to get right first. The solution is to use `-Report-Only` policies that will not enforce them and break your website. These headers and their enforcing equivalents supports reporting, which makes all policy violations gets sent to you so you can adjust your policies to not break functionality. 
 
 ### Setup a reporting endpoint and setup reporters on your policy headers
+
+```
+$ npm install reporting-api
+```
+
 ```ts
 import { reportingEndpoint } from 'reporting-api';
 import express from 'express';

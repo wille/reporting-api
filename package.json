@@ -11,7 +11,10 @@
   "files": [
     "dist/"
   ],
-  "repository": "github:wille/reporting-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wille/reporting-api.git"
+  },
   "author": "wille",
   "license": "MIT",
   "description": "Roll your own Reporting API collector. Supports CSP, COEP, COOP, Document-Policy, Crash reports, Deprecation reports, Intervention reports and Network Error Logging ",
