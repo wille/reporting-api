@@ -198,7 +198,8 @@ function addReporterToHeader(
             // report-uri is deprecated in CSP 3 and ignored if the browser supports report-to, but Firefox does not and will use report-uri
             const reportUri = addSearchParams(reportingUri, {
                 // Older versions of firefox doesn't include the disposition so we track it manually
-                disposition: header === 'Content-Security-Policy' ? 'enforce' : 'report',
+                disposition:
+                    header === 'Content-Security-Policy' ? 'enforce' : 'report',
             });
             value += `;report-uri ${reportUri}`;
 

@@ -1,4 +1,4 @@
-[![GitHub release](https://img.shields.io/npm/v/reporting-api.svg?style=flat-square)](https://github.com/wille/reporting-api/releases/latest)
+[![GitHub release](https://img.shields.io/npm/v/reporting-api.svg?style=flat-square)](https://www.npmjs.com/package/reporting-api)
 
 # reporting-api
 
@@ -12,8 +12,8 @@ Automatically sets up reporting for the following headers and features supportin
 )
 - [`Cross-Origin-Opener-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy) (COOP)
 - [`Cross-Origin-Opener-Policy-Report-Only`](https://github.com/camillelamy/explainers/blob/main/coop_reporting.md)
-- `Cross-Origin-Embedder-Policy` (COEP)
-- `Cross-Origin-Embedder-Policy-Report-Only`
+- [`Cross-Origin-Embedder-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy)  (COEP)
+- [`Cross-Origin-Embedder-Policy-Report-Only`](https://gist.github.com/yutakahirano/f14f15bd1595e1e913b0870649000470)
 - [`NEL` (Network Error Logging)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Network_Error_Logging)
 - [Deprecation Reports](https://wicg.github.io/deprecation-reporting/)
 - [Intervention Reports](https://wicg.github.io/intervention-reporting/)
@@ -36,10 +36,8 @@ const app = express();
 app.post('/reporting-endpoint', reportingEndpoint({
   onReport(report) {
     // Collect the reports and do what you want with them
-    console.log('Received report', report);
-
     console.log('Report received', {
-      isEnforced: report.body.type === 'enforce';
+      isEnforced: report.body.type === 'enforce',
       type: report.type,
       body: report.body,
     });
@@ -87,7 +85,7 @@ app.listen(8080);
 
 > [!NOTE]
 > The policy headers must be set before the reportingEndpointHeader middleware so the middleware is able to append the reporter to the policy headers.
->
+> ***
 > If the reporting endpoint is on another origin, you need to setup CORS
 > ```ts
 > import cors from 'cors';
@@ -131,12 +129,11 @@ Hello World!
 
 ## Resources
 
-- Permissions-Policy reporting https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md
-- Reporting API v0 and Reporting API v1 differences https://chromium.googlesource.com/chromium/src/+/HEAD/net/reporting/README.md#supporting-both-v0-and-v1-reporting-in-the-same-codebase
-- https://developer.chrome.com/blog/reporting-api-migration
-- `Report-To` header in reportingv0 https://www.w3.org/TR/reporting/
-- `Reporting-Endpoints` header in reportingv1 https://w3c.github.io/reporting/
-- https://www.tollmanz.com/content-security-policy-report-samples/ (2015)
+- [Permissions-Policy reporting](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md)
+- [Reporting API v0 and Reporting API v1 differences](https://chromium.googlesource.com/chromium/src/+/HEAD/net/reporting/README.md#supporting-both-v0-and-v1-reporting-in-the-same-codebase)
+- [Migrating from v0 to v1](https://developer.chrome.com/blog/reporting-api-migration)
+- [Reporting API v0 (Report-To)](https://www.w3.org/TR/reporting/)
+- [Reporting API v1 (Reporting-Endpoints)](https://w3c.github.io/reporting/)
 
 ### Notes
 

@@ -1,20 +1,24 @@
 {
   "name": "reporting-api",
-  "version": "0.0.0-alpha1",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build && node --test dist/*.test.js",
     "build": "tsc",
     "publish": "npm run build",
-    "format": "prettier --write ./src",
-    "prepare": "npm run build"
+    "format": "prettier --write ./src"
   },
+  "files": [
+    "dist/"
+  ],
   "repository": "github:wille/reporting-api",
   "author": "wille",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
+  "description": "Roll your own Reporting API collector. Supports CSP, COEP, COOP, Document-Policy, Crash reports, Deprecation reports, Intervention reports and Network Error Logging ",
   "peerDependencies": {
-    "express": ">= 4.16.0"
+    "express": ">= 4.16.0",
+    "debug": "^4",
+    "zod": "^3.23"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
@@ -23,9 +27,5 @@
     "node-mocks-http": "^1.15.0",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4"
-  },
-  "dependencies": {
-    "debug": "^4.3.5",
-    "zod": "^3.23.8"
   }
 }
