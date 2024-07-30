@@ -46,11 +46,15 @@ function filterReport(
     report: Report,
     { ignoreBrowserExtensions, maxAge }: ReportingEndpointConfig
 ): boolean {
-    if (ignoreBrowserExtensions && report.type === 'csp-violation') {
+    if (
+        ignoreBrowserExtensions &&
+        'sourceFile' in report.body &&
+        typeof report.body.sourceFile === 'string'
+    ) {
         if (
-            report.body.sourceFile?.startsWith('chrome-extension') ||
-            report.body.sourceFile?.startsWith('moz-extension') ||
-            report.body.sourceFile?.startsWith('safari-web-extension')
+            report.body.sourceFile.startsWith('chrome-extension') ||
+            report.body.sourceFile.startsWith('moz-extension') ||
+            report.body.sourceFile.startsWith('safari-web-extension')
         ) {
             return false;
         }
