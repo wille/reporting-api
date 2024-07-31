@@ -37,8 +37,10 @@ import express from 'express';
 
 const app = express();
 
-// The reporting endpoint
-app.post('/reporting-endpoint', reportingEndpoint({
+// The reporting endpoint.
+// Use `use` to support CORS preflight request if you are receiving reports from another origin
+app.use('/reporting-endpoint', reportingEndpoint({
+  allowedOrigins: '*', // Allow reports from all origins
   onReport(report) {
     // Collect the reports and do what you want with them
     console.log('Report received', {

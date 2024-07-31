@@ -44,7 +44,7 @@ export interface ReportingEndpointConfig {
     /**
      * Set this field to enable CORS for reports sent cross origin to other domains.
      * A special value '*' can be set to allow any domain to send reports to your endpoint.
-     * 
+     *
      * @example 'https://example.com'
      * @example /https:\/\/(.*)\.example.com$/
      */
@@ -127,6 +127,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
 
     return (req: Request, res: Response) => {
         if (req.method !== 'POST' && req.method !== 'OPTIONS') {
+            res.setHeader('Allow', 'POST, OPTIONS');
             return res.sendStatus(405);
         }
 
@@ -141,6 +142,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 isOriginAllowed(originHeader, allowedOrigins)
             ) {
                 res.setHeader('Access-Control-Allow-Origin', originHeader);
+                res.setHeader('Vary', 'Origin');
             }
 
             // Since reports are sent with a Content-Type header MIME type that is not considered 'simple' (https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests)
