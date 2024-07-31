@@ -122,8 +122,6 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
             if (onValidationError) {
                 onValidationError(result.error, raw, req);
             }
-
-            throw result.error;
         }
     }
 
