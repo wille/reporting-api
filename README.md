@@ -62,6 +62,7 @@ app.get('/*', (req, res, next) => {
 
   // Setup headers alternative 1
   setupReportingHeaders('/reporting-endpoint')(req, res);
+  return next();
 });
 // Setup headers alternative 2
 app.get('/*', setupReportingHeaders('/reporting-endpoint', {
