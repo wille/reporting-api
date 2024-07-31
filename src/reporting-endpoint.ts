@@ -40,6 +40,15 @@ export interface ReportingEndpointConfig {
      * Debug mode
      */
     debug?: boolean;
+
+    /**
+     * Set this field to enable CORS for reports sent cross origin to other domains.
+     * A special value '*' can be set to allow any domain to send reports to your endpoint.
+     * 
+     * @example 'https://example.com'
+     * @example /https:\/\/(.*)\.example.com$/
+     */
+    allowedOrigins?: string | RegExp | (string | RegExp)[];
 }
 
 function filterReport(
@@ -69,8 +78,23 @@ function filterReport(
     return true;
 }
 
+function isOriginAllowed(
+    origin: string,
+    allowedOrigin: ReportingEndpointConfig['allowedOrigins']
+): boolean {
+    if (Array.isArray(allowedOrigin)) {
+        return allowedOrigin.some((o) => isOriginAllowed(origin, o));
+    } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+    } else if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+    }
+
+    return false;
+}
+
 function createReportingEndpoint(config: ReportingEndpointConfig) {
-    const { onReport, onValidationError } = config;
+    const { onReport, onValidationError, allowedOrigins } = config;
 
     if (config.debug) {
         debug.enable('reporting-api:*');
@@ -103,9 +127,36 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         }
     }
 
-    return (req: Request, res: Response, next: NextFunction) => {
-        if (req.method !== 'POST') {
+    return (req: Request, res: Response) => {
+        if (req.method !== 'POST' && req.method !== 'OPTIONS') {
             return res.sendStatus(405);
+        }
+
+        // If cross origin reports are allowed, setup CORS on both OPTIONS and POST.
+        if (allowedOrigins) {
+            const originHeader = req.headers.origin;
+
+            if (config.allowedOrigins === '*') {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            } else if (
+                originHeader &&
+                isOriginAllowed(originHeader, allowedOrigins)
+            ) {
+                res.setHeader('Access-Control-Allow-Origin', originHeader);
+            }
+
+            // Since reports are sent with a Content-Type header MIME type that is not considered 'simple' (https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests)
+            // we will always get a preflight request
+            if (req.method === 'OPTIONS') {
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+                res.setHeader('Access-Control-Allow-Methods', 'POST');
+
+                // Capped at 7200 in Chrome
+                // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age#delta-seconds
+                res.setHeader('Access-Control-Max-Age', '7200');
+
+                return res.sendStatus(200);
+            }
         }
 
         const version =

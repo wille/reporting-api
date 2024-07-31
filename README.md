@@ -91,14 +91,6 @@ app.listen(8080);
 
 > [!NOTE]
 > The policy headers must be set before the reportingEndpointHeader middleware so the middleware is able to append the reporter to the policy headers.
-> ***
-> If the reporting endpoint is on another origin, you need to setup CORS
-> ```ts
-> import cors from 'cors';
-> const corsMiddleware = cors();
-> app.options('/reporting-endpoint', cors());
-> app.post('/reporting-endpoint', cors(), ...);
-> ```
 
 ### Response with a `Reporting-Endpoints` header created and reporter setup on the Policy headers
 ```
@@ -132,6 +124,9 @@ Hello World!
 
 - [`reportingEndpoint`](./src/reporting-endpoint.ts)
 - [`setupReportingHeaders`](./src/setup-headers.ts)
+
+> [!NOTE]
+> Set the `allowedOrigins` option on your reporting endpoint to allow cross origin reports.
 
 ## Resources
 
