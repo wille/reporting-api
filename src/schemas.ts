@@ -32,6 +32,7 @@ export const CrossOriginOpenerPolicyReport = z
             'navigate-to-document',
             'navigate-from-document',
             'navigation-from-response',
+            'navigation-to-response',
             'access-to-coop-page-from-opener',
             'access-from-coop-page-to-opener',
             'access-from-coop-page-to-other',
@@ -44,7 +45,7 @@ export const CrossOriginOpenerPolicyReport = z
         initialPopupURL: z.string().optional(),
         lineNumber: z.number().optional(),
         openeeURL: z.string().optional(), // url
-        property: z.string(), // closed, postMessage
+        property: z.string().optional(), // closed, postMessage
         sourceFile: z.string().optional(), // url
     })
     .passthrough();
