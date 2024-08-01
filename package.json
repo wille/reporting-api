@@ -1,13 +1,12 @@
 {
   "name": "reporting-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build && node --test dist/*.test.js",
     "build": "tsc",
     "publish": "npm run build",
-    "format": "prettier --write ./src",
-    "prepare": "npm run build"
+    "format": "prettier --write ./src"
   },
   "files": [
     "dist/"
