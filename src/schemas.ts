@@ -9,7 +9,7 @@ export const ContentSecurityPolicyReport = z
         effectiveDirective: z.string(),
         lineNumber: z.number().optional(),
         originalPolicy: z.string(),
-        referrer: z.string(),
+        referrer: z.string().optional(),
         sample: z.string().optional(),
         sourceFile: z.string().optional(),
         statusCode: z.number().optional(),
