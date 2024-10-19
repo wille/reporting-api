@@ -4,13 +4,20 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build && node --test dist/*.test.js",
-    "build": "tsc",
-    "publish": "npm run build",
+    "build": "rollup -c rollup.config.js",
+    "publish": "rm -rf dist && npm run build",
     "format": "prettier --write ./src"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
   },
   "files": [
     "dist/"
   ],
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wille/reporting-api.git"
@@ -19,16 +26,28 @@
   "license": "MIT",
   "description": "Roll your own Reporting API collector. Supports CSP, COEP, COOP, Document-Policy, Crash reports, Deprecation reports, Intervention reports and Network Error Logging ",
   "peerDependencies": {
-    "express": ">= 4.16.0",
     "debug": "^4",
+    "express": ">= 4.16.0",
     "zod": "^3.23"
   },
   "devDependencies": {
+    "@rollup/plugin-typescript": "^12.1.1",
     "@types/debug": "^4.1.12",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.10",
     "node-mocks-http": "^1.15.0",
     "prettier": "^3.3.3",
+    "rollup": "^4.24.0",
     "typescript": "^5.5.4"
-  }
+  },
+  "dependencies": {
+    "tslib": "^2.8.0"
+  },
+  "keywords": [
+    "express",
+    "reporting",
+    "content-security-policy",
+    "webappsec",
+    "csp"
+  ]
 }
