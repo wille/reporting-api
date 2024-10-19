@@ -5,7 +5,6 @@
   "scripts": {
     "test": "npm run build && node --test dist/*.test.js",
     "build": "rollup -c rollup.config.js",
-    "publish": "rm -rf dist && npm run build",
     "format": "prettier --write ./src"
   },
   "exports": {
