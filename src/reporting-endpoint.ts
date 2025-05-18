@@ -19,11 +19,15 @@ export interface ReportingEndpointConfig {
      * report is received then this function is used to track these reports so we
      * can take action on them.
      *
-     * @param error The validation error (ZodError)
+     * @param error The validation error
      * @param object The body of the report that failed the validation
      * @param req The request
      */
-    onValidationError?: (error: ZodError, body: any, req: Request) => any;
+    onValidationError?: (
+        error: ZodError | Error,
+        body: any,
+        req: Request
+    ) => any;
 
     /**
      * Ignore CSP violations from browser extensions
@@ -110,7 +114,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
 
             if (filterReport(report, config)) {
                 onReport(report, req);
-                log('received report %O', report);
+                log('received report %j', report);
             } else {
                 log('filtered %j', report);
             }
@@ -188,9 +192,16 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
 
             if (!body) {
                 log(
-                    'application/csp-report without csp-report in body: %O',
+                    'application/csp-report without csp-report in body: %j',
                     req.body
                 );
+                if (onValidationError) {
+                    onValidationError(
+                        new Error('Unknown application/csp-report report'),
+                        req.body,
+                        req
+                    );
+                }
                 return res.sendStatus(400);
             }
 
@@ -234,11 +245,6 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
             handleReport(result, req.body, req);
 
             return res.sendStatus(200);
-        }
-
-        if (req.headers['content-type'] !== 'application/reports+json') {
-            log('bad request: Content-Type: %s', req.headers['content-type']);
-            return res.sendStatus(400);
         }
 
         // Modern reporting API
