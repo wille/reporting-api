@@ -1,6 +1,6 @@
 {
   "name": "reporting-api",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "dist/index.js",
   "scripts": {
     "test": "npm run build && node --test dist/*.test.js",
