@@ -167,6 +167,23 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (req.headers['content-type'] === 'application/csp-report') {
+            // Newer safari sends reports in the format `body: {...}` with no `age`
+            if (typeof req.body.body === 'object') {
+                const { body, type, url } = req.body;
+                const result = Report.safeParse({
+                    body,
+                    type,
+                    url,
+                    age: 0,
+                    user_agent: req.headers['user-agent'] || '',
+                    report_format: 'report-to-safari',
+                    version,
+                } satisfies Report);
+
+                handleReport(result, req.body, req);
+                return res.sendStatus(200);
+            }
+
             const body = req.body['csp-report'];
 
             if (!body) {
@@ -222,23 +239,6 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         if (req.headers['content-type'] !== 'application/reports+json') {
             log('bad request: Content-Type: %s', req.headers['content-type']);
             return res.sendStatus(400);
-        }
-
-        // Safari sends reports in the format `body: {...}` with no `age`
-        if (typeof req.body.body === 'object') {
-            const { body, type, url } = req.body;
-            const result = Report.safeParse({
-                body,
-                type,
-                url,
-                age: 0,
-                user_agent: req.headers['user-agent'] || '',
-                report_format: 'report-to-safari',
-                version,
-            } satisfies Report);
-
-            handleReport(result, req.body, req);
-            return res.sendStatus(200);
         }
 
         // Modern reporting API
