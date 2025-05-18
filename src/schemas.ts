@@ -101,7 +101,7 @@ export const PermissionsPolicyViolation = z
 
         /**
          * The voilated policy
-         * `accelerometer`
+         * `accelerometer`, `autoplay`, ...
          */
         policyId: z.string(),
 
@@ -112,6 +112,19 @@ export const PermissionsPolicyViolation = z
     .passthrough();
 export type PermissionsPolicyViolation = z.infer<
     typeof PermissionsPolicyViolation
+>;
+
+export const PotentialPermissionsPolicyViolation = z
+    .object({
+        allowAttribute: z.string(),
+        disposition: z.enum(['report', 'enforce']),
+        message: z.string(),
+        policyId: z.string(),
+        srcAttribute: z.string(),
+    })
+    .passthrough();
+export type PotentialPermissionsPolicyViolation = z.infer<
+    typeof PotentialPermissionsPolicyViolation
 >;
 
 export const InterventionReport = z.object({
@@ -178,6 +191,10 @@ export const Report = z
             type: z.literal('permissions-policy-violation'),
             body: PermissionsPolicyViolation,
         }),
+        z.object({
+            type: z.literal('potential-permissions-policy-violation'),
+            body: PotentialPermissionsPolicyViolation,
+        }),
     ])
     .and(
         z.object({
@@ -200,9 +217,9 @@ export const Report = z
             /**
              * The format the report was received in
              *
-             * - `report-uri` - legacy csp report-uri attribute
-             * - `report-to-buffered` Reporting API v2 report
-             * - `report-to-single` Safari is not sending buffered reports
+             * - `report-uri` legacy csp report-uri attribute
+             * - `report-to` Reporting API report
+             * - `report-to-safari` Safari is not sending buffered reports, fields in camelCase, body in `body` instead of `csp-report` etc
              */
             report_format: z.enum([
                 'report-uri',
