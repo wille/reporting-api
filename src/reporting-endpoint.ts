@@ -35,6 +35,13 @@ export interface ReportingEndpointConfig {
     ignoreBrowserExtensions?: boolean;
 
     /**
+     * Ignore deprecation reports with the given IDs
+     *
+     * @example ['AttributionReporting', 'Topics'] deprecated ad APIs
+     */
+    ignoredDeprecationIds?: string[];
+
+    /**
      * The max age of reports in seconds. The reporting API is buffering
      * reports and can send more than one in a single report call
      */
@@ -57,7 +64,11 @@ export interface ReportingEndpointConfig {
 
 function filterReport(
     report: Report,
-    { ignoreBrowserExtensions, maxAge }: ReportingEndpointConfig
+    {
+        ignoreBrowserExtensions,
+        maxAge,
+        ignoredDeprecationIds,
+    }: ReportingEndpointConfig
 ): boolean {
     if (
         ignoreBrowserExtensions &&
@@ -76,6 +87,14 @@ function filterReport(
     // Reporting API v1 `age` is in milliseconds but our settings is in seconds
     if (maxAge && report.age > maxAge * 1000) {
         log('report is too old %O', report);
+        return false;
+    }
+
+    if (
+        report.type === 'deprecation' &&
+        ignoredDeprecationIds?.includes(report.body.id)
+    ) {
+        log('deprecation report is ignored %O', report);
         return false;
     }
 
