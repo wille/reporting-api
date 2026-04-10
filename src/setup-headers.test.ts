@@ -22,7 +22,7 @@ describe('Handles multiple headers and only updates the last occuring', () => {
         res.setHeader('Content-Security-Policy', inputCsp);
         res.setHeader(
             'Content-Security-Policy-Report-Only',
-            "frame-src 'none'",
+            "frame-src 'none'"
         );
 
         setupReportingHeaders('/endpoint')(req, res, next);
@@ -34,7 +34,7 @@ describe('Handles multiple headers and only updates the last occuring', () => {
         }
 
         expect(inputCsp.at(-1)).toBe(
-            "frame-src 'self';report-uri /endpoint?disposition=enforce;report-to reporter",
+            "frame-src 'self';report-uri /endpoint?disposition=enforce;report-to reporter"
         );
     });
 });

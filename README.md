@@ -1,146 +1,145 @@
-[![GitHub release](https://img.shields.io/npm/v/reporting-api.svg?style=flat-square)](https://www.npmjs.com/package/reporting-api)
-
 # reporting-api
 
-This package provides a middleware for Express.js that automatically configures the [Reporting API](https://w3c.github.io/reporting/) on existing policy headers and an endpoint to help you collect your own reports using the Reporting API.
+[![npm](https://img.shields.io/npm/v/reporting-api?style=flat-square)](https://www.npmjs.com/package/reporting-api)
+[![license](https://img.shields.io/npm/l/reporting-api?style=flat-square)](https://github.com/wille/reporting-api/blob/master/LICENSE)
 
-Automatically sets up reporting for the following headers and features supporting the Reporting API
-- [`Content-Security-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) (CSP)
-- [`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only)
-- [`Permissions-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Permissions_Policy)
-- [`Permissions-Policy-Report-Only`](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md
-)
-- [`Cross-Origin-Opener-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy) (COOP)
-- [`Cross-Origin-Opener-Policy-Report-Only`](https://github.com/camillelamy/explainers/blob/main/coop_reporting.md)
-- [`Cross-Origin-Embedder-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy)  (COEP)
-- [`Cross-Origin-Embedder-Policy-Report-Only`](https://gist.github.com/yutakahirano/f14f15bd1595e1e913b0870649000470)
-- [`NEL` (Network Error Logging)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Network_Error_Logging)
-- [Deprecation Reports](https://wicg.github.io/deprecation-reporting/)
-- [Intervention Reports](https://wicg.github.io/intervention-reporting/)
-- [Crash Reports](https://wicg.github.io/crash-reporting/)
+Express.js middleware for the [Reporting API](https://w3c.github.io/reporting/). Automatically wires up `report-to` / `report-uri` on your existing policy headers and gives you a ready-made endpoint to collect violation, deprecation, crash, and network error reports.
 
-Supports "CSP Level 2 Reports" in browsers browsers not supporting the Reporting API.
+## Supported headers and report types
 
-## Core concepts
+| Header | Shorthand |
+|--------|-----------|
+| [`Content-Security-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) | CSP |
+| [`Content-Security-Policy-Report-Only`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only) | |
+| [`Cross-Origin-Opener-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy) | COOP |
+| [`Cross-Origin-Opener-Policy-Report-Only`](https://github.com/camillelamy/explainers/blob/main/coop_reporting.md) | |
+| [`Cross-Origin-Embedder-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy) | COEP |
+| [`Cross-Origin-Embedder-Policy-Report-Only`](https://gist.github.com/yutakahirano/f14f15bd1595e1e913b0870649000470) | |
+| [`Permissions-Policy`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Permissions_Policy) | |
+| [`Permissions-Policy-Report-Only`](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md) | |
+| [`NEL` (Network Error Logging)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Network_Error_Logging) | NEL |
 
-Retrofitting a policy on a large website is hard to get right first. The solution is to use `-Report-Only` policies that will not enforce them and break your website. These headers and their enforcing equivalents supports reporting, which makes all policy violations gets sent to you so you can adjust your policies to not break functionality. 
+Plus [Deprecation](https://wicg.github.io/deprecation-reporting/), [Intervention](https://wicg.github.io/intervention-reporting/), and [Crash](https://wicg.github.io/crash-reporting/) reports.
 
-### Setup a reporting endpoint and setup reporters on your policy headers
+Backwards-compatible with CSP Level 2 `report-uri` for browsers that don't yet support the Reporting API.
 
+## Install
+
+```bash
+npm install reporting-api
 ```
-$ npm install reporting-api
-```
+
+Peer dependencies: `express`, `zod`, `debug`.
+
+## Quick start
 
 ```ts
-import { reportingEndpoint } from 'reporting-api';
 import express from 'express';
+import { reportingEndpoint, setupReportingHeaders } from 'reporting-api';
 
 const app = express();
 
-// The reporting endpoint.
-// Use `use` to support CORS preflight request if you are receiving reports from another origin
+// 1. Mount the reporting endpoint
 app.use('/reporting-endpoint', reportingEndpoint({
-  allowedOrigins: '*', // Allow reports from all origins
+  allowedOrigins: '*',
   onReport(report) {
-    // Collect the reports and do what you want with them
-    console.log('Report received', {
-      isEnforced: report.body.type === 'enforce',
-      type: report.type,
-      body: report.body,
-    });
-  }
+    console.log(report.type, report.body);
+  },
 }));
 
-// Set the security headers
-app.get('/*', (req, res, next) => {
-  // Set a CSP that disallows inline scripts.
+// 2. Set your policy headers, then let the middleware attach reporters
+app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "script-src 'self'");
-
-  // COOP policy that disallows link in new tab
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-
-  // COEP policy that disallows external resources that does not use CORS or CORP (Cross-Origin-Resource-Policy)
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-
-  // Setup headers alternative 1
-  setupReportingHeaders('/reporting-endpoint')(req, res);
-  return next();
+  next();
 });
-// Setup headers alternative 2
-app.get('/*', setupReportingHeaders('/reporting-endpoint', {
-  includeDefaultReporters: true,
-  enableNetworkErrorLogging: true,
-  version: '1',
-}));
-// 
-app.get('/test', (req, res) => {
-  res.writeHead(200, {
-    'Content-Type': 'text/html; charset=utf8'
-  });
-
-  // The script will not run and instead generate a csp-violation report
-  // Clicking the link will trigger a COOP report
-  // Loading the image will trigger a COEP report
-  res.end(`Hello World!
-<script>alert(1)</script>
-<a href="https://google.com" target="_blank">Trigger COOP</>
-<img src="https://lh3.googleusercontent.com/wAPeTvxh_EwOisF8kMR2L2eOrIOzjfA5AjE28W5asyfGeH85glwrO6zyqL71dCC26R63chADTO7DLOjnqRoXXOAB8t2f4C3QnU6o0BA">
-`);
-});
+app.use(setupReportingHeaders('/reporting-endpoint'));
 
 app.listen(8080);
 ```
 
 > [!NOTE]
-> The policy headers must be set before the reportingEndpointHeader middleware so the middleware is able to append the reporter to the policy headers.
+> Policy headers must be set **before** `setupReportingHeaders` runs so the middleware can append `report-to` and `report-uri` directives to them.
 
-### Response with a `Reporting-Endpoints` header created and reporter setup on the Policy headers
+The resulting response headers will look like this:
+
 ```
-$ curl -I localhost:8080/test
-Reporting-Endpoints: default=/test-endpoint
-Content-Security-Policy: default-src 'self'; report-to default; report-uri /reporting-endpoint?src=report-uri
-Cross-Origin-Opener-Policy: same-origin; report-to="default"
-Cross-Origin-Embedder-Policy: require-corp; report-to="default"
-
-Hello World!
-<script>alert(1)</script>
-<a href="https://google.com" target="_blank">Trigger COOP</>
-<img src="https://lh3.googleusercontent.com/wAPeTvxh_EwOisF8kMR2L2eOrIOzjfA5AjE28W5asyfGeH85glwrO6zyqL71dCC26R63chADTO7DLOjnqRoXXOAB8t2f4C3QnU6o0BA">
+Reporting-Endpoints: reporter="/reporting-endpoint"
+Content-Security-Policy: script-src 'self';report-uri /reporting-endpoint?disposition=enforce;report-to reporter
+Cross-Origin-Opener-Policy: same-origin;report-to="reporter"
+Cross-Origin-Embedder-Policy: require-corp;report-to="reporter"
 ```
 
-> [!TIP]
-> 
-> The Reporting API is also accessible in some browsers using the [ReportingObserver](https://developer.mozilla.org/en-US/docs/Web/API/ReportingObserver)
-> ```js
-> if (typeof ReportingObserver !== 'undefined') {
->   const myObserver = new ReportingObserver(reportList => {
->     reportList.forEach(report => {
->       console.log(report.body);
->     });
->   });
->   myObserver.observe();
-> }
->```
+## API
 
-## Configuration options
+### `reportingEndpoint(config)`
 
-- [`reportingEndpoint`](./src/reporting-endpoint.ts)
-- [`setupReportingHeaders`](./src/setup-headers.ts)
+Returns Express middleware that accepts incoming reports.
 
-> [!NOTE]
-> Set the `allowedOrigins` option on your reporting endpoint to allow cross origin reports.
+| Option | Type | Description |
+|--------|------|-------------|
+| `onReport` | `(report, req) => void` | Called for every valid report. |
+| `onValidationError` | `(error, body, req) => void` | Called when a report fails Zod validation. |
+| `allowedOrigins` | `string \| RegExp \| Array` | Enable CORS for cross-origin reports. Use `'*'` to allow any origin. |
+| `ignoreBrowserExtensions` | `boolean` | Drop CSP violations originating from browser extensions. |
+| `ignoredDeprecationIds` | `string[]` | Deprecation report IDs to ignore (e.g. `['AttributionReporting', 'Topics']`). |
+| `maxAge` | `number` | Maximum report age in **seconds**. Older buffered reports are dropped. |
+| `debug` | `boolean` | Enable `debug` logging for the `reporting-api:*` namespace. |
+
+### `setupReportingHeaders(url, config?)`
+
+Returns Express middleware that appends `report-to` / `report-uri` to every policy header already set on the response and adds the `Reporting-Endpoints` header.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `reportingGroup` | `string` | `"reporter"` | Reporting group name. |
+| `enableDefaultReporters` | `boolean` | `false` | Use the `default` group so you also receive Deprecation, Crash, and Intervention reports. |
+| `enableNetworkErrorLogging` | `boolean \| object` | `false` | Add `Report-To` + `NEL` headers (Reporting API v0, required for NEL). Accepts `{ success_fraction, failure_fraction, include_subdomains }`. |
+| `version` | `string \| number` | — | Appended as a `?version=` query param so you can correlate reports with policy revisions. |
+
+## Report schema
+
+Every report delivered to `onReport` is validated with Zod and has the shape:
+
+```ts
+{
+  type: 'csp-violation' | 'coop' | 'coep' | 'deprecation' | 'crash'
+       | 'intervention' | 'network-error' | 'permissions-policy-violation'
+       | 'potential-permissions-policy-violation';
+  body: { /* type-specific fields */ };
+  url: string;
+  age: number;
+  user_agent: string;
+  report_format: 'report-uri' | 'report-to' | 'report-to-safari';
+  version?: string;
+}
+```
+
+Full type definitions are exported as `Report` and the individual body types (`ContentSecurityPolicyReport`, `CrossOriginOpenerPolicyReport`, etc.).
+
+## Client-side observing
+
+Reports can also be observed in the browser via [ReportingObserver](https://developer.mozilla.org/en-US/docs/Web/API/ReportingObserver):
+
+```js
+if (typeof ReportingObserver !== 'undefined') {
+  new ReportingObserver((reports) => {
+    reports.forEach(r => console.log(r.body));
+  }).observe();
+}
+```
 
 ## Resources
 
-- [Permissions-Policy reporting](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md)
-- [Reporting API v0 and Reporting API v1 differences](https://chromium.googlesource.com/chromium/src/+/HEAD/net/reporting/README.md#supporting-both-v0-and-v1-reporting-in-the-same-codebase)
+- [Reporting API v1 spec (Reporting-Endpoints)](https://w3c.github.io/reporting/)
+- [Reporting API v0 spec (Report-To)](https://www.w3.org/TR/reporting/)
 - [Migrating from v0 to v1](https://developer.chrome.com/blog/reporting-api-migration)
-- [Reporting API v0 (Report-To)](https://www.w3.org/TR/reporting/)
-- [Reporting API v1 (Reporting-Endpoints)](https://w3c.github.io/reporting/)
+- [v0 vs v1 differences (Chromium)](https://chromium.googlesource.com/chromium/src/+/HEAD/net/reporting/README.md#supporting-both-v0-and-v1-reporting-in-the-same-codebase)
+- [Permissions-Policy reporting](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md)
 
 ### Notes
 
-- `Permissions-Policy` reports to the `default` reporting group if `report-to` is not set.
-- `report-to` group MUST be in double quotes (eg. `report-to="group"`) in COOP AND COEP headers to be used.
-- [`Document-Policy`](https://wicg.github.io/document-policy/) and [`Document-Policy-Report-Only`](https://wicg.github.io/document-policy/) is doesn't look that supported or well documented, is it supersceded by Permissions-Policy?
-- Safari sends reports in the format `body: { ... }` instead of an array of reports and it doesn't include an `age`
+- `Permissions-Policy` reports to the `default` group when `report-to` is not set.
+- COOP and COEP require `report-to` values wrapped in double quotes (e.g. `report-to="group"`).
+- Safari sends reports as `{ body: { ... } }` instead of an array and omits `age`.
