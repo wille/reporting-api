@@ -3,7 +3,7 @@
   "version": "1.0.5",
   "main": "dist/index.js",
   "scripts": {
-    "test": "npm run build && node --test dist/*.test.js",
+    "test": "vitest run",
     "build": "rollup -c rollup.config.js",
     "format": "prettier --write ./src"
   },
@@ -37,7 +37,8 @@
     "node-mocks-http": "^1.15.0",
     "prettier": "^3.3.3",
     "rollup": "^4.24.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "tslib": "^2.8.0"
