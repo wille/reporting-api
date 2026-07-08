@@ -3,16 +3,16 @@ import { z } from 'zod';
 export const ContentSecurityPolicyReport = z
     .object({
         blockedURL: z.string(),
-        columnNumber: z.number().optional(),
+        columnNumber: z.number().nullish(),
         disposition: z.enum(['enforce', 'report']),
         documentURL: z.string(), // url
         effectiveDirective: z.string(),
-        lineNumber: z.number().optional(),
+        lineNumber: z.number().nullish(),
         originalPolicy: z.string(),
         referrer: z.string().nullish(),
-        sample: z.string().optional(),
-        sourceFile: z.string().optional(),
-        statusCode: z.number().optional(),
+        sample: z.string().nullish(),
+        sourceFile: z.string().nullish(),
+        statusCode: z.number().nullish(),
     })
     .passthrough();
 export type ContentSecurityPolicyReport = z.infer<
@@ -41,12 +41,12 @@ export const CrossOriginOpenerPolicyReport = z
             'access-to-coop-page-from-openee',
             'access-to-coop-page-from-other',
         ]),
-        columnNumber: z.number().optional(),
-        initialPopupURL: z.string().optional(),
-        lineNumber: z.number().optional(),
-        openeeURL: z.string().optional(), // url
-        property: z.string().optional(), // closed, postMessage
-        sourceFile: z.string().optional(), // url
+        columnNumber: z.number().nullish(),
+        initialPopupURL: z.string().nullish(),
+        lineNumber: z.number().nullish(),
+        openeeURL: z.string().nullish(), // url
+        property: z.string().nullish(), // closed, postMessage
+        sourceFile: z.string().nullish(), // url
     })
     .passthrough();
 export type CrossOriginOpenerPolicyReport = z.infer<
@@ -57,7 +57,7 @@ export const CrossOriginEmbedderPolicyReport = z
     .object({
         disposition: z.enum(['reporting', 'enforce']),
 
-        blockedURL: z.string().optional(), // url
+        blockedURL: z.string().nullish(), // url
 
         /**
          * - navigation
@@ -69,7 +69,7 @@ export const CrossOriginEmbedderPolicyReport = z
         /**
          * Set on `type: 'corp'`
          */
-        destination: z.string().optional(), // script, iframe
+        destination: z.string().nullish(), // script, iframe
     })
     .passthrough();
 /**
@@ -105,8 +105,8 @@ export const PermissionsPolicyViolation = z
          */
         policyId: z.string(),
 
-        columnNumber: z.number().optional(),
-        lineNumber: z.number().optional(),
+        columnNumber: z.number().nullish(),
+        lineNumber: z.number().nullish(),
         sourceFile: z.string(),
     })
     .passthrough();
@@ -131,9 +131,9 @@ export const InterventionReport = z.object({
     id: z.string(),
     message: z.string(),
 
-    columnNumber: z.number().optional(),
-    lineNumber: z.number().optional(),
-    sourceFile: z.string().optional(),
+    columnNumber: z.number().nullish(),
+    lineNumber: z.number().nullish(),
+    sourceFile: z.string().nullish(),
 });
 export type InterventionReport = z.infer<typeof InterventionReport>;
 
@@ -143,7 +143,7 @@ export const CrashReport = z.object({
      *
      * - `oom` Out of memory
      */
-    reason: z.string().optional(), // oom
+    reason: z.string().nullish(), // oom
 });
 export type CrashReport = z.infer<typeof CrashReport>;
 
@@ -151,9 +151,9 @@ export const DeprecationReport = z.object({
     id: z.string(),
     message: z.string(),
 
-    columnNumber: z.number().optional(),
-    lineNumber: z.number().optional(),
-    sourceFile: z.string().optional(),
+    columnNumber: z.number().nullish(),
+    lineNumber: z.number().nullish(),
+    sourceFile: z.string().nullish(),
 });
 export type DeprecationReport = z.infer<typeof DeprecationReport>;
 
@@ -212,7 +212,7 @@ export const Report = z
             /**
              * Your policy version
              */
-            version: z.string().optional(),
+            version: z.string().nullish(),
 
             /**
              * The format the report was received in
