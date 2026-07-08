@@ -19,7 +19,7 @@ Express.js middleware for the [Reporting API](https://w3c.github.io/reporting/).
 | [`Permissions-Policy-Report-Only`](https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md) | |
 | [`NEL` (Network Error Logging)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Network_Error_Logging) | NEL |
 
-Plus [Deprecation](https://wicg.github.io/deprecation-reporting/), [Intervention](https://wicg.github.io/intervention-reporting/), and [Crash](https://wicg.github.io/crash-reporting/) reports.
+Plus [Document-Policy violation](https://wicg.github.io/document-policy/), [Deprecation](https://wicg.github.io/deprecation-reporting/), [Intervention](https://wicg.github.io/intervention-reporting/), and [Crash](https://wicg.github.io/crash-reporting/) reports.
 
 Backwards-compatible with CSP Level 2 `report-uri` for browsers that don't yet support the Reporting API.
 
@@ -106,7 +106,8 @@ Every report delivered to `onReport` is validated with Zod and has the shape:
 {
   type: 'csp-violation' | 'coop' | 'coep' | 'deprecation' | 'crash'
        | 'intervention' | 'network-error' | 'permissions-policy-violation'
-       | 'potential-permissions-policy-violation' | 'feature-policy-violation';
+       | 'potential-permissions-policy-violation' | 'feature-policy-violation'
+       | 'document-policy-violation';
   body: { /* type-specific fields */ };
   url: string;
   age: number;

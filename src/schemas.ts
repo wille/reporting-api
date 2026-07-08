@@ -137,6 +137,27 @@ export const FeaturePolicyViolation = z
     .passthrough();
 export type FeaturePolicyViolation = z.infer<typeof FeaturePolicyViolation>;
 
+/**
+ * https://wicg.github.io/document-policy/
+ */
+export const DocumentPolicyViolation = z
+    .object({
+        message: z.string(),
+        disposition: z.enum(['report', 'enforce']),
+
+        /**
+         * The violated policy
+         * `document-write`, `force-load-at-top`, ...
+         */
+        policyId: z.string(),
+
+        columnNumber: z.number().nullish(),
+        lineNumber: z.number().nullish(),
+        sourceFile: z.string().nullish(),
+    })
+    .passthrough();
+export type DocumentPolicyViolation = z.infer<typeof DocumentPolicyViolation>;
+
 export const PotentialPermissionsPolicyViolation = z
     .object({
         allowAttribute: z.string(),
@@ -227,6 +248,10 @@ export const Report = z
         z.object({
             type: z.literal('feature-policy-violation'),
             body: FeaturePolicyViolation,
+        }),
+        z.object({
+            type: z.literal('document-policy-violation'),
+            body: DocumentPolicyViolation,
         }),
     ])
     .and(

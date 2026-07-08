@@ -190,6 +190,25 @@ describe('Parse report', () => {
         } satisfies schemas.Report);
     });
 
+    it('parses a document-policy-violation report', () => {
+        schemas.Report.parse({
+            age: 420,
+            body: {
+                columnNumber: 12,
+                disposition: 'enforce',
+                lineNumber: 11,
+                message:
+                    'Document policy violation: document-write is not allowed in this document.',
+                policyId: 'document-write',
+                sourceFile: 'https://site.example/script.js',
+            },
+            type: 'document-policy-violation',
+            url: 'https://site.example/',
+            user_agent: 'Mozilla/5.0... Chrome/92.0.4504.0',
+            report_format: 'report-to',
+        } satisfies schemas.Report);
+    });
+
     it('parses a legacy feature-policy-violation report from Firefox', () => {
         schemas.Report.parse({
             age: 445,
