@@ -114,6 +114,29 @@ export type PermissionsPolicyViolation = z.infer<
     typeof PermissionsPolicyViolation
 >;
 
+/**
+ * Legacy report type sent by Firefox, which implemented reporting before
+ * Feature Policy was renamed to Permissions Policy.
+ * Same as `permissions-policy-violation` but with `featureId` instead of `policyId`
+ */
+export const FeaturePolicyViolation = z
+    .object({
+        message: z.string().nullish(),
+        disposition: z.enum(['report', 'enforce']),
+
+        /**
+         * The violated feature
+         * `serial`, `geolocation`, ...
+         */
+        featureId: z.string(),
+
+        columnNumber: z.number().nullish(),
+        lineNumber: z.number().nullish(),
+        sourceFile: z.string().nullish(),
+    })
+    .passthrough();
+export type FeaturePolicyViolation = z.infer<typeof FeaturePolicyViolation>;
+
 export const PotentialPermissionsPolicyViolation = z
     .object({
         allowAttribute: z.string(),
@@ -150,6 +173,12 @@ export type CrashReport = z.infer<typeof CrashReport>;
 export const DeprecationReport = z.object({
     id: z.string(),
     message: z.string(),
+
+    /**
+     * Date when the browser version that removes the feature ships,
+     * e.g. `2020-01-01`. Not always known
+     */
+    anticipatedRemoval: z.string().nullish(),
 
     columnNumber: z.number().nullish(),
     lineNumber: z.number().nullish(),
@@ -194,6 +223,10 @@ export const Report = z
         z.object({
             type: z.literal('potential-permissions-policy-violation'),
             body: PotentialPermissionsPolicyViolation,
+        }),
+        z.object({
+            type: z.literal('feature-policy-violation'),
+            body: FeaturePolicyViolation,
         }),
     ])
     .and(

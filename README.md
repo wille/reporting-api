@@ -106,7 +106,7 @@ Every report delivered to `onReport` is validated with Zod and has the shape:
 {
   type: 'csp-violation' | 'coop' | 'coep' | 'deprecation' | 'crash'
        | 'intervention' | 'network-error' | 'permissions-policy-violation'
-       | 'potential-permissions-policy-violation';
+       | 'potential-permissions-policy-violation' | 'feature-policy-violation';
   body: { /* type-specific fields */ };
   url: string;
   age: number;
