@@ -319,12 +319,13 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         // Modern reporting API
         if (Array.isArray(req.body)) {
             for (const raw of req.body) {
+                // Entries that aren't objects, e.g. `null`, fail validation
                 const result = Report.safeParse({
-                    body: raw.body,
-                    type: raw.type,
-                    age: raw.age,
-                    url: raw.url,
-                    user_agent: raw.user_agent,
+                    body: raw?.body,
+                    type: raw?.type,
+                    age: raw?.age,
+                    url: raw?.url,
+                    user_agent: raw?.user_agent,
                     report_format: 'report-to',
                     version,
                 } satisfies Report);

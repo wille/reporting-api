@@ -335,6 +335,22 @@ describe('report filtering', () => {
     });
 });
 
+describe('malformed batches', () => {
+    it('passes non-object entries to onValidationError and keeps processing', () => {
+        const onReport = vi.fn();
+        const onValidationError = vi.fn();
+        const { res } = call(
+            { onReport, onValidationError },
+            post([null, 'string', validReport()])
+        );
+
+        expect(res.statusCode).toBe(200);
+        expect(onReport).toHaveBeenCalledOnce();
+        expect(onValidationError).toHaveBeenCalledTimes(2);
+        expect(onValidationError.mock.calls[0][1]).toBeNull();
+    });
+});
+
 describe('callback errors', () => {
     it('keeps processing the batch when onReport throws', () => {
         const error = new Error('db down');
