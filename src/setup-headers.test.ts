@@ -53,3 +53,65 @@ it('Does not update headers if they already contain report-to or report-uri', ()
     setupReportingHeaders('/endpoint')(req, res, next);
     expect(res.getHeader('content-security-policy')).toEqual(inputCsp);
 });
+
+describe('Headers with multiple list members', () => {
+    it('adds report-to to every feature in Permissions-Policy', () => {
+        const req = createRequest();
+        const res = createResponse();
+
+        res.setHeader(
+            'Permissions-Policy',
+            'camera=(), geolocation=(self "https://a.example")'
+        );
+        setupReportingHeaders('/endpoint')(req, res);
+
+        expect(res.getHeader('permissions-policy')).toEqual([
+            'camera=();report-to=reporter, geolocation=(self "https://a.example");report-to=reporter',
+        ]);
+    });
+
+    it('keeps an existing per-feature reporter', () => {
+        const req = createRequest();
+        const res = createResponse();
+
+        res.setHeader(
+            'Permissions-Policy',
+            'camera=();report-to=other, geolocation=()'
+        );
+        setupReportingHeaders('/endpoint')(req, res);
+
+        expect(res.getHeader('permissions-policy')).toEqual([
+            'camera=();report-to=other, geolocation=();report-to=reporter',
+        ]);
+    });
+
+    it('adds reporting to every comma separated CSP policy', () => {
+        const req = createRequest();
+        const res = createResponse();
+
+        res.setHeader(
+            'Content-Security-Policy',
+            "script-src 'self', img-src 'self'"
+        );
+        setupReportingHeaders('/endpoint')(req, res);
+
+        const reporter =
+            ';report-uri /endpoint?disposition=enforce;report-to reporter';
+        expect(res.getHeader('content-security-policy')).toEqual([
+            `script-src 'self'${reporter}, img-src 'self'${reporter}`,
+        ]);
+    });
+
+    it('does not set Reporting-Endpoints when every member has a reporter', () => {
+        const req = createRequest();
+        const res = createResponse();
+
+        res.setHeader(
+            'Permissions-Policy',
+            'camera=();report-to=a, geolocation=();report-to=b'
+        );
+        setupReportingHeaders('/endpoint')(req, res);
+
+        expect(res.getHeader('reporting-endpoints')).toBeUndefined();
+    });
+});

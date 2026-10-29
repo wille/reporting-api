@@ -176,6 +176,10 @@ export function setupReportingHeaders(
 
 /**
  * Adds a reporter to a header
+ *
+ * CSP headers can contain multiple comma separated policies and Permissions-Policy
+ * is a dictionary where `report-to` is set per feature, so the reporter is added
+ * to every list member that doesn't already have one.
  */
 function addReporterToHeader(
     header: Header,
@@ -183,14 +187,7 @@ function addReporterToHeader(
     reportingGroup: string,
     reportingUri: string
 ): string | null {
-    if (
-        typeof value !== 'string' ||
-        value.includes('report-to') ||
-        value.includes('report-uri ')
-    ) {
-        log(`Header "%s: %s" already contains reporter`, header, value);
-        return null;
-    }
+    let directive: string;
 
     switch (header) {
         case 'Content-Security-Policy':
@@ -201,29 +198,67 @@ function addReporterToHeader(
                 disposition:
                     header === 'Content-Security-Policy' ? 'enforce' : 'report',
             });
-            value += `;report-uri ${reportUri}`;
 
             // CSP does not have a `=` between report-to and the group name
-            value += `;report-to ${reportingGroup}`;
+            directive = `;report-uri ${reportUri};report-to ${reportingGroup}`;
             break;
         case 'Permissions-Policy':
         case 'Permissions-Policy-Report-Only':
             // https://github.com/w3c/webappsec-permissions-policy/blob/main/reporting.md
-            value += `;report-to=${reportingGroup}`;
+            directive = `;report-to=${reportingGroup}`;
             break;
         case 'Cross-Origin-Embedder-Policy':
         case 'Cross-Origin-Embedder-Policy-Report-Only':
         case 'Cross-Origin-Opener-Policy':
         case 'Cross-Origin-Opener-Policy-Report-Only':
             // All other headers than CSP needs the `=` and needs to be encapsulated with ""
-            value += `;report-to="${reportingGroup}"`;
+            directive = `;report-to="${reportingGroup}"`;
             break;
         default:
             log(`Unknown header ${header}`);
             return null;
     }
 
-    return value;
+    let modified = false;
+    const members = splitList(value).map((member) => {
+        if (member.includes('report-to') || member.includes('report-uri ')) {
+            log(`Header "%s: %s" already contains reporter`, header, member);
+            return member;
+        }
+
+        modified = true;
+        return member + directive;
+    });
+
+    return modified ? members.join(', ') : null;
+}
+
+/**
+ * Splits a comma separated header value, ignoring commas in quoted strings
+ */
+function splitList(value: string): string[] {
+    const members: string[] = [];
+    let current = '';
+    let quoted = false;
+
+    for (let i = 0; i < value.length; i++) {
+        const c = value[i];
+        if (c === '\\' && quoted) {
+            current += c + (value[++i] ?? '');
+            continue;
+        }
+        if (c === '"') {
+            quoted = !quoted;
+        } else if (c === ',' && !quoted) {
+            members.push(current);
+            current = '';
+            continue;
+        }
+        current += c;
+    }
+    members.push(current);
+
+    return members.map((m) => m.trim()).filter(Boolean);
 }
 
 function addSearchParams(url: string, params: Record<string, string>) {
