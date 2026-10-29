@@ -116,6 +116,16 @@ function isOriginAllowed(
     return false;
 }
 
+/**
+ * The Content-Type without parameters, e.g. `; charset=utf-8`
+ */
+function mimeType(req: Request): string {
+    return (req.headers['content-type'] || '')
+        .split(';')[0]
+        .trim()
+        .toLowerCase();
+}
+
 function createReportingEndpoint(config: ReportingEndpointConfig) {
     const { onReport, onValidationError, allowedOrigins } = config;
 
@@ -189,7 +199,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
 
         // CSP Level 2 Reports
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
-        if (req.headers['content-type'] === 'application/csp-report') {
+        if (mimeType(req) === 'application/csp-report') {
             // Newer safari sends reports in the format `body: {...}` with no `age`
             if (typeof req.body.body === 'object') {
                 const { body, type, url } = req.body;

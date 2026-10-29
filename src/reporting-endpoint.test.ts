@@ -104,6 +104,24 @@ describe('CSP Level 2 report-uri format', () => {
         });
     });
 
+    it('accepts a content-type with parameters', () => {
+        const onReport = vi.fn();
+        const { res } = call(
+            { onReport },
+            {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/csp-report; charset=utf-8',
+                },
+                body: cspLevel2Body,
+            }
+        );
+
+        expect(res.statusCode).toBe(200);
+        expect(onReport).toHaveBeenCalledOnce();
+        expect(onReport.mock.calls[0][0].type).toBe('csp-violation');
+    });
+
     it('falls back to the deprecated violated-directive field', () => {
         const onReport = vi.fn();
         const body = structuredClone(cspLevel2Body);
