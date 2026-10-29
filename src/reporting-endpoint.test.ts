@@ -335,6 +335,69 @@ describe('report filtering', () => {
     });
 });
 
+describe('callback errors', () => {
+    it('keeps processing the batch when onReport throws', () => {
+        const error = new Error('db down');
+        const onReport = vi.fn().mockImplementationOnce(() => {
+            throw error;
+        });
+        const onError = vi.fn();
+        const { res, req } = call(
+            { onReport, onError },
+            post([validReport(), validReport()])
+        );
+
+        expect(res.statusCode).toBe(200);
+        expect(onReport).toHaveBeenCalledTimes(2);
+        expect(onError).toHaveBeenCalledExactlyOnceWith(error, req);
+    });
+
+    it('passes rejected promises from onReport to onError', async () => {
+        const error = new Error('db down');
+        const onError = vi.fn();
+        const { res, req } = call(
+            { onReport: () => Promise.reject(error), onError },
+            post([validReport()])
+        );
+
+        expect(res.statusCode).toBe(200);
+        await vi.waitFor(() =>
+            expect(onError).toHaveBeenCalledExactlyOnceWith(error, req)
+        );
+    });
+
+    it('passes errors thrown by onValidationError to onError', () => {
+        const error = new Error('tracking failed');
+        const onError = vi.fn();
+        const { res } = call(
+            {
+                onReport: vi.fn(),
+                onValidationError: () => {
+                    throw error;
+                },
+                onError,
+            },
+            post([{ type: 'unknown-type' }])
+        );
+
+        expect(res.statusCode).toBe(200);
+        expect(onError.mock.calls[0][0]).toBe(error);
+    });
+
+    it('logs to console.error when onError is not set', async () => {
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const error = new Error('db down');
+        call({ onReport: () => Promise.reject(error) }, post([validReport()]));
+
+        await vi.waitFor(() =>
+            expect(consoleError).toHaveBeenCalledWith(expect.any(String), error)
+        );
+        consoleError.mockRestore();
+    });
+});
+
 describe('CORS', () => {
     it('allows any origin with allowedOrigins: "*"', () => {
         const onReport = vi.fn();

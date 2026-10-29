@@ -30,6 +30,13 @@ export interface ReportingEndpointConfig {
     ) => any;
 
     /**
+     * Called when `onReport` or `onValidationError` throws or returns a rejected promise.
+     *
+     * Defaults to logging the error with `console.error`
+     */
+    onError?: (error: unknown, req: Request) => any;
+
+    /**
      * Ignore CSP violations from browser extensions
      */
     ignoreBrowserExtensions?: boolean;
@@ -127,10 +134,41 @@ function mimeType(req: Request): string {
 }
 
 function createReportingEndpoint(config: ReportingEndpointConfig) {
-    const { onReport, onValidationError, allowedOrigins } = config;
+    const { onReport, onValidationError, onError, allowedOrigins } = config;
 
     if (config.debug) {
         debug.enable('reporting-api:*');
+    }
+
+    /**
+     * Calls a user callback without letting a thrown error or rejected promise
+     * fail the request or crash the process
+     */
+    function safeCall(req: Request, fn: () => any) {
+        const handleError = (err: unknown) => {
+            log('callback error %O', err);
+            if (!onError) {
+                console.error('reporting-api: callback error', err);
+                return;
+            }
+
+            const onErrorFailed = (e: unknown) =>
+                console.error('reporting-api: onError threw', e);
+            try {
+                Promise.resolve(onError(err, req)).catch(onErrorFailed);
+            } catch (e) {
+                onErrorFailed(e);
+            }
+        };
+
+        try {
+            const result = fn();
+            if (result && typeof result.then === 'function') {
+                result.then(undefined, handleError);
+            }
+        } catch (err) {
+            handleError(err);
+        }
     }
 
     function handleReport<Input extends Report, Output extends Report>(
@@ -142,7 +180,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
             const report = result.data;
 
             if (filterReport(report, config)) {
-                onReport(report, req);
+                safeCall(req, () => onReport(report, req));
                 log('received report %j', report);
             } else {
                 log('filtered %j', report);
@@ -153,7 +191,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 err: result.error,
             });
             if (onValidationError) {
-                onValidationError(result.error, raw, req);
+                safeCall(req, () => onValidationError(result.error, raw, req));
             }
         }
     }
@@ -225,10 +263,12 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                     req.body
                 );
                 if (onValidationError) {
-                    onValidationError(
-                        new Error('Unknown application/csp-report report'),
-                        req.body,
-                        req
+                    safeCall(req, () =>
+                        onValidationError(
+                            new Error('Unknown application/csp-report report'),
+                            req.body,
+                            req
+                        )
                     );
                 }
                 return res.sendStatus(400);

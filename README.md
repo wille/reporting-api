@@ -81,6 +81,7 @@ Returns Express middleware that accepts incoming reports.
 |--------|------|-------------|
 | `onReport` | `(report, req) => void` | Called for every valid report. |
 | `onValidationError` | `(error, body, req) => void` | Called when a report fails Zod validation. |
+| `onError` | `(error, req) => void` | Called when `onReport` or `onValidationError` throws or rejects. Defaults to `console.error`. |
 | `allowedOrigins` | `string \| RegExp \| Array` | Enable CORS for cross-origin reports. Use `'*'` to allow any origin. |
 | `ignoreBrowserExtensions` | `boolean` | Drop CSP violations originating from browser extensions. |
 | `ignoredDeprecationIds` | `string[]` | Deprecation report IDs to ignore (e.g. `['AttributionReporting', 'Topics']`). |
