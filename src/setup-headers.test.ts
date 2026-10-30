@@ -8,8 +8,13 @@ import debug from 'debug';
 
 debug.enable('*');
 
-describe('Handles multiple headers and only updates the last occuring', () => {
-    it('updates the last CSP header with report-uri and report-to', () => {
+const enforceReporter =
+    ';report-uri /endpoint?disposition=enforce;report-to reporter';
+
+describe('Handles multiple header values', () => {
+    // setHeader is given copies since the middleware updates the array in place
+
+    it('adds report-uri and report-to to every CSP header value', () => {
         const req = createRequest();
         const res = createResponse();
         const next = () => {};
@@ -19,7 +24,7 @@ describe('Handles multiple headers and only updates the last occuring', () => {
             "img-src 'self'",
             "frame-src 'self'",
         ];
-        res.setHeader('Content-Security-Policy', inputCsp);
+        res.setHeader('Content-Security-Policy', [...inputCsp]);
         res.setHeader(
             'Content-Security-Policy-Report-Only',
             "frame-src 'none'"
@@ -27,31 +32,52 @@ describe('Handles multiple headers and only updates the last occuring', () => {
 
         setupReportingHeaders('/endpoint')(req, res, next);
 
-        const outputCsp = res.getHeader('content-security-policy') as string[];
-
-        for (let i = 0; i < inputCsp.length - 1; i++) {
-            expect(inputCsp[i]).toBe(outputCsp[i]);
-        }
-
-        expect(inputCsp.at(-1)).toBe(
-            "frame-src 'self';report-uri /endpoint?disposition=enforce;report-to reporter"
+        expect(res.getHeader('content-security-policy')).toEqual(
+            inputCsp.map((value) => value + enforceReporter)
+        );
+        expect(res.getHeader('content-security-policy-report-only')).toEqual([
+            "frame-src 'none';report-uri /endpoint?disposition=report;report-to reporter",
+        ]);
+        expect(res.getHeader('reporting-endpoints')).toBe(
+            'reporter="/endpoint"'
         );
     });
-});
 
-it('Does not update headers if they already contain report-to or report-uri', () => {
-    const req = createRequest();
-    const res = createResponse();
-    const next = () => {};
+    it('does not update header values that already contain report-to or report-uri', () => {
+        const req = createRequest();
+        const res = createResponse();
+        const next = () => {};
 
-    const inputCsp = [
-        "script-src 'self';report-uri /endpoint?src=csp;report-to csp",
-        "img-src 'self'",
-        "frame-src 'self'",
-    ];
-    res.setHeader('Content-Security-Policy', inputCsp);
-    setupReportingHeaders('/endpoint')(req, res, next);
-    expect(res.getHeader('content-security-policy')).toEqual(inputCsp);
+        const inputCsp = [
+            "script-src 'self';report-uri /endpoint?src=csp;report-to csp",
+            "img-src 'self'",
+            "frame-src 'self'",
+        ];
+        res.setHeader('Content-Security-Policy', [...inputCsp]);
+        setupReportingHeaders('/endpoint')(req, res, next);
+
+        expect(res.getHeader('content-security-policy')).toEqual([
+            inputCsp[0],
+            inputCsp[1] + enforceReporter,
+            inputCsp[2] + enforceReporter,
+        ]);
+    });
+
+    it('does not set Reporting-Endpoints when every value has a reporter', () => {
+        const req = createRequest();
+        const res = createResponse();
+        const next = () => {};
+
+        const inputCsp = [
+            "script-src 'self';report-uri /csp",
+            "img-src 'self';report-to csp",
+        ];
+        res.setHeader('Content-Security-Policy', [...inputCsp]);
+        setupReportingHeaders('/endpoint')(req, res, next);
+
+        expect(res.getHeader('content-security-policy')).toEqual(inputCsp);
+        expect(res.getHeader('reporting-endpoints')).toBeUndefined();
+    });
 });
 
 describe('Headers with multiple list members', () => {
