@@ -94,22 +94,32 @@ export const NetworkErrorLogging = z
     .passthrough();
 export type NetworkErrorLogging = z.infer<typeof NetworkErrorLogging>;
 
-export const PermissionsPolicyViolation = z
-    .object({
-        message: z.string(),
-        disposition: z.enum(['report', 'enforce']),
+/**
+ * Firefox sends `permissions-policy-violation` reports with the legacy
+ * `featureId` field instead of `policyId` and without a `message`
+ */
+export const PermissionsPolicyViolation = z.preprocess(
+    (body: any) =>
+        body && typeof body === 'object' && body.policyId == null
+            ? { ...body, policyId: body.featureId }
+            : body,
+    z
+        .object({
+            message: z.string().nullish(),
+            disposition: z.enum(['report', 'enforce']),
 
-        /**
-         * The voilated policy
-         * `accelerometer`, `autoplay`, ...
-         */
-        policyId: z.string(),
+            /**
+             * The voilated policy
+             * `accelerometer`, `autoplay`, ...
+             */
+            policyId: z.string(),
 
-        columnNumber: z.number().nullish(),
-        lineNumber: z.number().nullish(),
-        sourceFile: z.string(),
-    })
-    .passthrough();
+            columnNumber: z.number().nullish(),
+            lineNumber: z.number().nullish(),
+            sourceFile: z.string(),
+        })
+        .passthrough()
+);
 export type PermissionsPolicyViolation = z.infer<
     typeof PermissionsPolicyViolation
 >;

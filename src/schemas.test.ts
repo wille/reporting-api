@@ -190,6 +190,46 @@ describe('Parse report', () => {
         } satisfies schemas.Report);
     });
 
+    it('parses a permissions-policy-violation report from Firefox with featureId', () => {
+        const report = schemas.Report.parse({
+            age: 312,
+            user_agent:
+                'Mozilla/5.0 (X11; Linux x86_64; rv:159.0) Gecko/20100101 Firefox/159.0',
+            url: 'https://example.com/',
+            report_format: 'report-to',
+            type: 'permissions-policy-violation',
+            body: {
+                featureId: 'geolocation',
+                sourceFile: 'https://example.com/assets/app.js',
+                lineNumber: 2,
+                columnNumber: 329176,
+                disposition: 'enforce',
+            },
+        });
+
+        expect(report.type).toBe('permissions-policy-violation');
+        expect(report.body).toMatchObject({
+            policyId: 'geolocation',
+            featureId: 'geolocation',
+        });
+    });
+
+    it('rejects a permissions-policy-violation report without policyId or featureId', () => {
+        expect(() =>
+            schemas.Report.parse({
+                age: 0,
+                user_agent: '',
+                url: '',
+                report_format: 'report-to',
+                type: 'permissions-policy-violation',
+                body: {
+                    sourceFile: 'https://example.com/',
+                    disposition: 'enforce',
+                },
+            })
+        ).toThrow();
+    });
+
     it('parses a document-policy-violation report', () => {
         schemas.Report.parse({
             age: 420,
