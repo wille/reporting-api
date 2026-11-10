@@ -179,6 +179,26 @@ describe('CSP Level 2 report-uri format', () => {
         expect(onValidationError).toHaveBeenCalledOnce();
         expect(onValidationError.mock.calls[0][0]).toBeInstanceOf(Error);
     });
+
+    it('responds 400 when Express 5 left the body unparsed', () => {
+        const onReport = vi.fn();
+        const onValidationError = vi.fn();
+        const handler = reportingEndpoint({
+            onReport,
+            onValidationError,
+        })[1] as RequestHandler;
+        const req = createRequest({
+            method: 'POST',
+            headers: { 'content-type': 'application/csp-report' },
+        });
+        req.body = undefined;
+        const res = createResponse();
+        handler(req, res, () => {});
+
+        expect(res.statusCode).toBe(400);
+        expect(onReport).not.toHaveBeenCalled();
+        expect(onValidationError).toHaveBeenCalledOnce();
+    });
 });
 
 describe('Safari report-to format', () => {

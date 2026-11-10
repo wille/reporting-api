@@ -239,7 +239,7 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
         // See MDN docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only
         if (mimeType(req) === 'application/csp-report') {
             // Newer safari sends reports in the format `body: {...}` with no `age`
-            if (typeof req.body.body === 'object') {
+            if (typeof req.body?.body === 'object') {
                 const { body, type, url } = req.body;
                 const result = Report.safeParse({
                     body,
@@ -255,7 +255,8 @@ function createReportingEndpoint(config: ReportingEndpointConfig) {
                 return res.sendStatus(200);
             }
 
-            const body = req.body['csp-report'];
+            // Express 5 leaves req.body undefined when the request has no body
+            const body = req.body?.['csp-report'];
 
             if (!body) {
                 log(
